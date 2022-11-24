@@ -1,9 +1,7 @@
 package bind
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -49,82 +47,6 @@ func Header(receiver any, data map[string][]string) error {
 	return parse(receiver, headerTagKey, data)
 }
 
-func Env(receiver any) error {
-	if receiver == nil { // TODO: test nil
-		return nil
-	}
-
-	typ := reflect.TypeOf(receiver).Elem()
-	val := reflect.ValueOf(receiver).Elem()
-
-	// We do not have a struct, error.
-	if typ.Kind() != reflect.Struct { // TODO: test non-struct
-		return fmt.Errorf("got %s, expected struct", typ.Kind().String())
-	}
-
-	// Loop over all the fields in the struct.
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		value := val.Field(i)
-
-		if field.Anonymous {
-			if value.Kind() == reflect.Ptr {
-				value = value.Elem()
-			}
-		}
-
-		if !value.CanSet() {
-			continue
-		}
-
-		valueKind := value.Kind()
-		tag := field.Tag.Get(envTagKey)
-
-		// handle anonymous struct fields
-		if field.Anonymous && valueKind == reflect.Struct && tag != "" { // TODO: test anonymous field
-			return fmt.Errorf("env tags are not allowed with anonymous struct fields")
-		}
-
-		if tag == "" {
-			continue // This property of the struct isn't bindable.
-		}
-
-		envValue := os.Getenv(tag)
-		if envValue == "" {
-			envValue = field.Tag.Get(defaultTagKey)
-		}
-
-		if envValue == "" {
-			continue // This property doesn't exist in the env and default isn't set.
-		}
-
-		// Slice isn't yet supported; TODO: parse env value as csv to populate slice
-		if valueKind == reflect.Slice { // TODO: test slice
-			return fmt.Errorf("slice is not supported on field: %s", field.Name)
-		}
-
-		// handle time.Time specifically
-		if value.Type() == timeType {
-			t, err := time.Parse(tagTimeFormat, envValue)
-			if err != nil { // TODO: test incorrect time value
-				return fmt.Errorf("unable to parse time for %s: %v", envValue, err)
-			}
-
-			value.Set(reflect.ValueOf(t))
-			continue
-		}
-
-		// Not a slice, add first string in data for this struct field to the struct.
-		err := setWithProperType(field.Type.Kind(), envValue, value)
-		if err != nil { // todo: test erring prop type
-			return fmt.Errorf("%v", err)
-		}
-	}
-
-	return nil
-
-}
-
 func parse(receiver any, tagKey string, data map[string][]string) error {
 	if receiver == nil || data == nil {
 		return nil
@@ -144,7 +66,7 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 
 	// We do not have a struct, error.
 	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf("got %s, expected struct", typ.Kind().String())
+		return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
 	}
 
 	// Loop over all the fields in the struct.
@@ -166,8 +88,8 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 		tag := field.Tag.Get(tagKey)
 
 		// handle anonymous struct fields
-		if field.Anonymous && valueKind == reflect.Struct && tag != "" { // TODO: test anonymous field
-			return fmt.Errorf("%s tags are not allowed with anonymous struct fields", tagKey)
+		if field.Anonymous && valueKind == reflect.Struct && tag != "" {
+			return fmt.Errorf("%s %w", tagKey, ErrFieldAnonymousStruct)
 		}
 
 		if tag == "" {
@@ -175,7 +97,7 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 		}
 
 		inputValue, exists := data[tag]
-		if !exists { // TODO: test messed up key casing in data
+		if !exists {
 			// The data didn't have an exact match on the key so let's make sure that the
 			// URL parameter isn't masked by case sensitivity.
 			for k, v := range data {
@@ -187,8 +109,20 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 			}
 		}
 
+		// check for default tag
 		if !exists {
-			continue // This property doesn't exist in the query data.
+			// get default tag value from struct definition
+			def := field.Tag.Get(defaultTagKey)
+
+			if def != "" {
+				// use the default value
+				exists = true
+				inputValue = []string{def}
+			}
+		}
+
+		if !exists {
+			continue // This property doesn't exist in the input data.
 		}
 
 		// Slice should populate from the data slice (converted to correct base type)
@@ -200,7 +134,7 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 			for j := 0; j < numElems; j++ {
 				err := setWithProperType(sliceOf, inputValue[j], slice.Index(j))
 				if err != nil { // TODO: test un-parsable type in slice
-					return fmt.Errorf("%v", err)
+					return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
 				}
 			}
 
@@ -212,8 +146,8 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 		// handle time.Time specifically
 		if value.Type() == timeType {
 			t, err := time.Parse(tagTimeFormat, inputValue[0])
-			if err != nil { // TODO: test un-parsable time value in data
-				return fmt.Errorf("unable to parse time for %s: %v", inputValue[0], err)
+			if err != nil {
+				return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, inputValue[0], err)
 			}
 
 			value.Set(reflect.ValueOf(t))
@@ -222,8 +156,8 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 
 		// Not a slice, add first string in data for this struct field to the struct.
 		err := setWithProperType(field.Type.Kind(), inputValue[0], value)
-		if err != nil { // TODO: test un-parsable type in struct
-			return fmt.Errorf("%v", err)
+		if err != nil {
+			return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
 		}
 	}
 
@@ -263,7 +197,7 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 	case reflect.String:
 		structField.SetString(val)
 	default:
-		return errors.New("unknown type")
+		return fmt.Errorf("%w: %s", ErrFieldUnsupportedType, valueKind.String())
 	}
 	return nil
 }
