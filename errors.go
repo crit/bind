@@ -10,4 +10,5 @@ var (
 	ErrFieldSliceType          = errors.New("slice is not supported on field")
 	ErrFieldTimeFormat         = errors.New("unable to parse time")
 	ErrFieldUnsupportedType    = errors.New("unsupported type")
+	ErrUnknown                 = errors.New("unknown error")
 )
