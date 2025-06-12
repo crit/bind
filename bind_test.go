@@ -9,25 +9,25 @@ import (
 )
 
 type TestReceiver struct {
-	Int           int       `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Int8          int8      `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Int16         int16     `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Int32         int32     `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Int64         int64     `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Uint          uint      `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Uint8         uint8     `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Uint16        uint16    `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Uint32        uint32    `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Uint64        uint64    `env:"BIND_TEST_VALUE_INT" test:"int"`
-	Bool          bool      `env:"BIND_TEST_VALUE_BOOL" test:"bool"`
-	Float32       float32   `env:"BIND_TEST_VALUE_FLOAT" test:"float"`
-	Float64       float64   `env:"BIND_TEST_VALUE_FLOAT" test:"float"`
-	String        string    `env:"BIND_TEST_VALUE_STRING" test:"string"`
-	Time          time.Time `env:"BIND_TEST_VALUE_TIME" test:"time"`
-	SliceInt      []int     `test:"slice_int"`    // TODO: env support
-	SliceBool     []bool    `test:"slice_bool"`   // TODO: env support
-	SliceFloat    []float64 `test:"slice_float"`  // TODO: env support
-	SliceString   []string  `test:"slice_string"` // TODO: env support
+	Int           int       `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int8          int8      `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int16         int16     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int32         int32     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int64         int64     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint          uint      `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint8         uint8     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint16        uint16    `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint32        uint32    `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint64        uint64    `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Bool          bool      `env:"BIND_TEST_VALUE_BOOL" test:"bool" flag:"bool"`
+	Float32       float32   `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
+	Float64       float64   `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
+	String        string    `env:"BIND_TEST_VALUE_STRING" test:"string" flag:"string"`
+	Time          time.Time `env:"BIND_TEST_VALUE_TIME" test:"time" flag:"time"`
+	SliceInt      []int     `test:"slice_int"`    // TODO: env/flag support
+	SliceBool     []bool    `test:"slice_bool"`   // TODO: env/flag support
+	SliceFloat    []float64 `test:"slice_float"`  // TODO: env/flag support
+	SliceString   []string  `test:"slice_string"` // TODO: env/flag support
 	StrangeCasing string    `test:"strange_casing"`
 }
 

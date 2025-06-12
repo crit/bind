@@ -24,6 +24,9 @@ const (
 	// the tag in the struct definition. ex: `form:"customer_id"`
 	formTagKey = "form"
 
+	// the tag in the struct definition. ex: `flag:"configDir"`
+	flagTagKey = "flag"
+
 	// time format expected in  date field TODO: name better? make configurable with default?
 	tagTimeFormat = "2006-01-02"
 )
