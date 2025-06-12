@@ -10,19 +10,19 @@ import (
 
 var registeredFlags = make(map[string]bool)
 
-func parseType(receiver any) string {
+func parseTypeKey(receiver any) string {
 	return strings.TrimLeft(fmt.Sprintf("%T", receiver), "*")
 }
 
 func RegisterFlags(receivers ...any) {
 	for _, receiver := range receivers {
 		// Register the receiver type in the registeredFlags map
-		receiverType := parseType(receiver)
-		if _, exists := registeredFlags[receiverType]; exists {
+		key := parseTypeKey(receiver)
+		if _, exists := registeredFlags[key]; exists {
 			// Skip already registered types
 			continue
 		}
-		registeredFlags[receiverType] = true
+		registeredFlags[key] = true
 
 		// get struct tag for all properties of receiver
 		typ := reflect.TypeOf(receiver)
@@ -43,7 +43,11 @@ func RegisterFlags(receivers ...any) {
 				continue
 			}
 
-			flag.String(tag, "", field.Name)
+			if flag.Lookup(tag) != nil {
+				continue
+			}
+
+			flag.String(tag, field.Tag.Get(defaultTagKey), field.Name)
 		}
 	}
 
@@ -55,8 +59,8 @@ func Flag(receiver any) error {
 		return nil
 	}
 
-	if !registeredFlags[parseType(receiver)] {
-		return fmt.Errorf("%s is not registered with bind.RegisterFlags", parseType(receiver))
+	if !registeredFlags[parseTypeKey(receiver)] {
+		return fmt.Errorf("%w: %s", ErrFlagNotRegistered, parseTypeKey(receiver))
 	}
 
 	typ := reflect.TypeOf(receiver).Elem()

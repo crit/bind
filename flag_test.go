@@ -43,6 +43,7 @@ func TestFlag(t *testing.T) {
 	}
 
 	var receiver TestReceiver
+	RegisterFlags(receiver)
 
 	err := Flag(&receiver)
 	require.Nil(t, err)
@@ -59,6 +60,8 @@ func TestFlag_DefaultValue(t *testing.T) {
 		Data int `flag:"data" default:"23"`
 	}{}
 
+	RegisterFlags(receiver)
+
 	err := Flag(&receiver)
 	require.Nil(t, err)
 	assert.Equal(t, 23, receiver.Data)
@@ -66,6 +69,7 @@ func TestFlag_DefaultValue(t *testing.T) {
 
 func TestFlagError_NonStruct(t *testing.T) {
 	receiver := 1
+	RegisterFlags(receiver) // unable to register
 
 	err := Flag(&receiver)
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
@@ -78,6 +82,7 @@ func TestFlagError_Slice(t *testing.T) {
 	receiver := struct {
 		Data []string `flag:"slice"`
 	}{}
+	RegisterFlags(receiver)
 
 	err := Flag(&receiver)
 	require.ErrorIs(t, err, ErrFieldSliceType)
@@ -90,20 +95,22 @@ func TestFlagError_Time(t *testing.T) {
 	receiver := struct {
 		Data time.Time `flag:"time_error"`
 	}{}
+	RegisterFlags(receiver)
 
 	err := Flag(&receiver)
 	require.ErrorIs(t, err, ErrFieldTimeFormat)
 }
 
 func TestFlagError_FieldType(t *testing.T) {
-	flag.String("data", "", "string value")
-	flag.Set("data", "23")
+	flag.String("data_error", "", "string value")
+	flag.Set("data_error", "23")
 
 	receiver := struct {
 		Data struct {
 			Value int
-		} `flag:"data"`
+		} `flag:"data_error"`
 	}{}
+	RegisterFlags(receiver)
 
 	err := Flag(&receiver)
 	require.ErrorIs(t, err, ErrFieldUnsupportedType)

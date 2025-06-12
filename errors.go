@@ -10,5 +10,6 @@ var (
 	ErrFieldSliceType          = errors.New("slice is not supported on field")
 	ErrFieldTimeFormat         = errors.New("unable to parse time")
 	ErrFieldUnsupportedType    = errors.New("unsupported type")
+	ErrFlagNotRegistered       = errors.New("flag not registered with bind.RegisterFlags")
 	ErrUnknown                 = errors.New("unknown error")
 )
