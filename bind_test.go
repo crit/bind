@@ -135,3 +135,32 @@ func TestParseError_FieldType(t *testing.T) {
 	err := parse(&receiver, "test", data)
 	require.ErrorIs(t, err, ErrFieldUnsupportedType)
 }
+
+func TestParse_MapReceiver_InitializesNilMapAndSkipsEmptyValues(t *testing.T) {
+	var receiver map[string]string
+	data := map[string][]string{
+		"a": {"1"},
+		"b": {},
+		"c": {"3", "ignored"},
+	}
+
+	err := parse(&receiver, "test", data)
+	require.NoError(t, err)
+
+	expected := map[string]string{
+		"a": "1",
+		"c": "3",
+	}
+	assert.Equal(t, expected, receiver)
+}
+
+func TestParse_PointerField_AllocatesNilPointer(t *testing.T) {
+	receiver := struct {
+		Data *int `test:"data"`
+	}{}
+
+	err := parse(&receiver, "test", map[string][]string{"data": {"23"}})
+	require.NoError(t, err)
+	require.NotNil(t, receiver.Data)
+	assert.Equal(t, 23, *receiver.Data)
+}

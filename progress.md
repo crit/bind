@@ -25,10 +25,10 @@
 
 ## Epic 3: Fix Map and Pointer Edge Cases
 
-- [ ] In map binding path, guard against empty value slices before indexing `v[0]`.
-- [ ] Initialize map receiver when nil before calling `SetMapIndex`.
-- [ ] In pointer field binding, allocate nil pointers before recursive set.
-- [ ] Add tests for map and pointer edge cases.
+- [x] In map binding path, guard against empty value slices before indexing `v[0]`.
+- [x] Initialize map receiver when nil before calling `SetMapIndex`.
+- [x] In pointer field binding, allocate nil pointers before recursive set.
+- [x] Add tests for map and pointer edge cases.
 
 ## Epic 4: Improve Environment Variable Semantics
 

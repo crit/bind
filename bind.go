@@ -91,7 +91,14 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 
 	// Receiver is a map, so copy data to receiver.
 	if typ.Kind() == reflect.Map {
+		if val.IsNil() {
+			val.Set(reflect.MakeMap(typ))
+		}
+
 		for k, v := range data {
+			if len(v) == 0 {
+				continue
+			}
 			val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
 		}
 
@@ -197,6 +204,9 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value) error {
 	switch valueKind {
 	case reflect.Ptr:
+		if structField.IsNil() {
+			structField.Set(reflect.New(structField.Type().Elem()))
+		}
 		return setWithProperType(structField.Elem().Kind(), val, structField.Elem())
 	case reflect.Int:
 		return setIntField(val, 0, structField)
