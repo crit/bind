@@ -47,7 +47,7 @@ func TestFlag(t *testing.T) {
 
 	err := Flag(&receiver)
 	require.Nil(t, err)
-	assert.Equal(t, receiver, expected)
+	assert.Equal(t, expected, receiver)
 }
 
 func TestFlag_NilReceiver(t *testing.T) {
