@@ -133,7 +133,20 @@ If parsing fails, bind returns `ErrFieldTimeFormat`.
 
 - No custom time layout configuration yet.
 - No built-in CSV parsing for env/flag slices.
-- Reflection-based binding (no struct metadata cache yet).
+
+## Benchmarks
+
+Run:
+
+```bash
+go test -run '^$' -bench 'Benchmark(Parse|Env|FlagWithSet)$' -benchmem ./...
+```
+
+Example result (Apple M1):
+
+- `BenchmarkParse`: ~700 ns/op, 256 B/op, 6 allocs/op
+- `BenchmarkEnv`: ~710 ns/op, 136 B/op, 2 allocs/op
+- `BenchmarkFlagWithSet`: ~1420 ns/op, 240 B/op, 8 allocs/op
 
 ## Troubleshooting
 

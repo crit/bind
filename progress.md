@@ -61,7 +61,7 @@
 
 ## Epic 8: Performance and Maintainability
 
-- [ ] Evaluate caching of struct metadata to reduce reflection overhead.
-- [ ] Add benchmarks for parse/env/flag workflows.
-- [ ] Refactor common binding logic to reduce duplication and improve readability.
-- [ ] Keep error messages consistent and actionable.
+- [x] Evaluate caching of struct metadata to reduce reflection overhead.
+- [x] Add benchmarks for parse/env/flag workflows.
+- [x] Refactor common binding logic to reduce duplication and improve readability.
+- [x] Keep error messages consistent and actionable.

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -31,9 +32,17 @@ const (
 	tagTimeFormat = "2006-01-02"
 )
 
+type fieldMeta struct {
+	index int
+	field reflect.StructField
+}
+
 var (
 	// cached time type
 	timeType = reflect.TypeOf(time.Time{})
+
+	// cached struct field metadata by type
+	structFieldCache sync.Map // map[reflect.Type][]fieldMeta
 )
 
 // TODO: look at github.com/go-playground/validator/v10 struct caching tech to make improvements here.
@@ -117,10 +126,10 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 		return nil
 	}
 
-	// Loop over all the fields in the struct.
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		value := val.Field(i)
+	fields := cachedFields(typ)
+	for _, meta := range fields {
+		field := meta.field
+		value := val.Field(meta.index)
 
 		if field.Anonymous && value.Kind() == reflect.Ptr {
 			if value.IsNil() {
@@ -133,84 +142,111 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 			continue
 		}
 
-		valueKind := value.Kind()
-		tag := field.Tag.Get(tagKey)
-
-		// handle anonymous struct fields
-		if field.Anonymous && valueKind == reflect.Struct && tag != "" {
-			return fmt.Errorf("%s %w", tagKey, ErrFieldAnonymousStruct)
-		}
-
-		if tag == "" {
-			continue // This property of the struct isn't bindable.
-		}
-
-		inputValue, exists := data[tag]
-		if !exists {
-			// The data didn't have an exact match on the key so let's make sure that the
-			// URL parameter isn't masked by case sensitivity.
-			for k, v := range data {
-				if strings.EqualFold(k, tag) {
-					inputValue = v
-					exists = true
-					break
-				}
-			}
-		}
-
-		// check for default tag
-		if !exists {
-			// get default tag value from struct definition
-			def := field.Tag.Get(defaultTagKey)
-
-			if def != "" {
-				// use the default value
-				exists = true
-				inputValue = []string{def}
-			}
-		}
-
-		if !exists {
-			continue // This property doesn't exist in the input data.
-		}
-
-		// Slice should populate from the data slice (converted to correct base type)
-		numElems := len(inputValue)
-		if valueKind == reflect.Slice && numElems > 0 {
-			sliceOf := value.Type().Elem().Kind()
-			slice := reflect.MakeSlice(value.Type(), numElems, numElems)
-
-			for j := 0; j < numElems; j++ {
-				err := setWithProperType(sliceOf, inputValue[j], slice.Index(j))
-				if err != nil { // TODO: test un-parsable type in slice
-					return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
-				}
-			}
-
-			val.Field(i).Set(slice)
-
-			continue
-		}
-
-		// handle time.Time specifically
-		if value.Type() == timeType {
-			t, err := time.Parse(tagTimeFormat, inputValue[0])
-			if err != nil {
-				return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, inputValue[0], err)
-			}
-
-			value.Set(reflect.ValueOf(t))
-			continue
-		}
-
-		// Not a slice, add first string in data for this struct field to the struct.
-		err := setWithProperType(field.Type.Kind(), inputValue[0], value)
-		if err != nil {
-			return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
+		if err := bindValueToField(field, value, tagKey, data); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func cachedFields(typ reflect.Type) []fieldMeta {
+	if cached, ok := structFieldCache.Load(typ); ok {
+		return cached.([]fieldMeta)
+	}
+
+	fields := make([]fieldMeta, 0, typ.NumField())
+	for i := 0; i < typ.NumField(); i++ {
+		fields = append(fields, fieldMeta{index: i, field: typ.Field(i)})
+	}
+
+	actual, _ := structFieldCache.LoadOrStore(typ, fields)
+	return actual.([]fieldMeta)
+}
+
+func bindValueToField(field reflect.StructField, value reflect.Value, tagKey string, data map[string][]string) error {
+	valueKind := value.Kind()
+	tag := field.Tag.Get(tagKey)
+
+	// handle anonymous struct fields
+	if field.Anonymous && valueKind == reflect.Struct && tag != "" {
+		return fmt.Errorf("%s %w", tagKey, ErrFieldAnonymousStruct)
+	}
+
+	if tag == "" {
+		return nil // This property of the struct isn't bindable.
+	}
+
+	inputValue, exists := lookupInputValue(tag, data)
+	if !exists {
+		// check for default tag
+		def := field.Tag.Get(defaultTagKey)
+		if def != "" {
+			exists = true
+			inputValue = []string{def}
+		}
+	}
+
+	if !exists {
+		return nil // This property doesn't exist in the input data.
+	}
+
+	// Slice should populate from the data slice (converted to correct base type)
+	numElems := len(inputValue)
+	if valueKind == reflect.Slice && numElems > 0 {
+		sliceOf := value.Type().Elem().Kind()
+		slice := reflect.MakeSlice(value.Type(), numElems, numElems)
+
+		for j := 0; j < numElems; j++ {
+			err := setWithProperType(sliceOf, inputValue[j], slice.Index(j))
+			if err != nil { // TODO: test un-parsable type in slice
+				return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
+			}
+		}
+
+		value.Set(slice)
+		return nil
+	}
+
+	if len(inputValue) == 0 {
+		return nil
+	}
+
+	// handle time.Time specifically
+	if value.Type() == timeType {
+		t, err := time.Parse(tagTimeFormat, inputValue[0])
+		if err != nil {
+			return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, inputValue[0], err)
+		}
+
+		value.Set(reflect.ValueOf(t))
+		return nil
+	}
+
+	// Not a slice, add first string in data for this struct field to the struct.
+	err := setWithProperType(field.Type.Kind(), inputValue[0], value)
+	if err != nil {
+		return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
+	}
+
+	return nil
+}
+
+func lookupInputValue(tag string, data map[string][]string) ([]string, bool) {
+	inputValue, exists := data[tag]
+	if exists {
+		return inputValue, true
+	}
+
+	// The data didn't have an exact match on the key so let's make sure that the
+	// URL parameter isn't masked by case sensitivity.
+	for k, v := range data {
+		if strings.EqualFold(k, tag) {
+			return v, true
+		}
+	}
+
+	return nil, false
 }
 
 func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value) error {
