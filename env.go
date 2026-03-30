@@ -70,7 +70,8 @@ func Env(receiver any) error {
 
 		// handle time.Time specifically
 		if value.Type() == timeType {
-			t, err := time.Parse(tagTimeFormat, envValue)
+			layout := fieldTimeLayout(field)
+			t, err := time.Parse(layout, envValue)
 			if err != nil {
 				return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, envValue, err)
 			}

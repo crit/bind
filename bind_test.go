@@ -113,6 +113,42 @@ func TestParse_NilReceiver_IsNoOp(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestParse_TimeLayoutTagOverride(t *testing.T) {
+	data := map[string][]string{
+		"date": {"2022/11/10"},
+	}
+
+	receiver := struct {
+		Date time.Time `test:"date" time_layout:"2006/01/02"`
+	}{}
+
+	err := parse(&receiver, "test", data)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC), receiver.Date)
+}
+
+func TestParse_TimeLayoutGlobalConfig(t *testing.T) {
+	defer ResetTimeLayout()
+	require.NoError(t, SetTimeLayout("02-01-2006"))
+
+	data := map[string][]string{
+		"date": {"10-11-2022"},
+	}
+
+	receiver := struct {
+		Date time.Time `test:"date"`
+	}{}
+
+	err := parse(&receiver, "test", data)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC), receiver.Date)
+}
+
+func TestSetTimeLayoutError_Empty(t *testing.T) {
+	err := SetTimeLayout("")
+	require.ErrorIs(t, err, ErrInvalidTimeLayout)
+}
+
 func TestParseError_Time(t *testing.T) {
 	data := map[string][]string{
 		"date": {"abc"},
@@ -120,6 +156,19 @@ func TestParseError_Time(t *testing.T) {
 
 	receiver := struct {
 		Date time.Time `test:"date"`
+	}{}
+
+	err := parse(&receiver, "test", data)
+	require.ErrorIs(t, err, ErrFieldTimeFormat)
+}
+
+func TestParseError_Time_CustomLayoutMismatch(t *testing.T) {
+	data := map[string][]string{
+		"date": {"2022/11/10"},
+	}
+
+	receiver := struct {
+		Date time.Time `test:"date" time_layout:"2006-01-02"`
 	}{}
 
 	err := parse(&receiver, "test", data)

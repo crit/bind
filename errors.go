@@ -11,5 +11,6 @@ var (
 	ErrFieldTimeFormat         = errors.New("unable to parse time")
 	ErrFieldUnsupportedType    = errors.New("unsupported type")
 	ErrFlagNotRegistered       = errors.New("flag not registered with bind.RegisterFlags")
+	ErrInvalidTimeLayout       = errors.New("invalid time layout")
 	ErrUnknown                 = errors.New("unknown error")
 )

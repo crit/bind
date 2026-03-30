@@ -68,10 +68,10 @@
 
 ## Epic 9: Configurable Time Layout Support
 
-- [ ] Add support for configurable time layout (global option and/or per-field tag override).
-- [ ] Preserve current default layout (`2006-01-02`) for backward compatibility.
-- [ ] Add tests for custom layouts and invalid layout/value combinations.
-- [ ] Document configuration patterns and migration guidance in `README.md`.
+- [x] Add support for configurable time layout (global option and/or per-field tag override).
+- [x] Preserve current default layout (`2006-01-02`) for backward compatibility.
+- [x] Add tests for custom layouts and invalid layout/value combinations.
+- [x] Document configuration patterns and migration guidance in `README.md`.
 
 ## Epic 10: CSV Slice Parsing for Env and Flag
 

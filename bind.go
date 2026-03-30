@@ -28,8 +28,11 @@ const (
 	// the tag in the struct definition. ex: `flag:"configDir"`
 	flagTagKey = "flag"
 
-	// time format expected in  date field TODO: name better? make configurable with default?
+	// time format expected in date field by default
 	tagTimeFormat = "2006-01-02"
+
+	// optional tag override for parsing time.Time values
+	timeLayoutTagKey = "time_layout"
 )
 
 type fieldMeta struct {
@@ -40,6 +43,10 @@ type fieldMeta struct {
 var (
 	// cached time type
 	timeType = reflect.TypeOf(time.Time{})
+
+	// configurable global time layout
+	timeLayout = tagTimeFormat
+	timeMux    sync.RWMutex
 
 	// cached struct field metadata by type
 	structFieldCache sync.Map // map[reflect.Type][]fieldMeta
@@ -96,6 +103,38 @@ func receiverElem(receiver any, allowMap bool) (reflect.Type, reflect.Value, err
 	}
 
 	return elemType, elemVal, nil
+}
+
+// SetTimeLayout configures the global default layout used to parse time.Time
+// fields for all binders. The zero value is not allowed.
+func SetTimeLayout(layout string) error {
+	if layout == "" {
+		return ErrInvalidTimeLayout
+	}
+
+	// Validate layout by parsing a known value against it.
+	if _, err := time.Parse(layout, time.Now().Format(layout)); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidTimeLayout, err)
+	}
+
+	timeMux.Lock()
+	timeLayout = layout
+	timeMux.Unlock()
+	return nil
+}
+
+// TimeLayout returns the currently configured global default time layout.
+func TimeLayout() string {
+	timeMux.RLock()
+	defer timeMux.RUnlock()
+	return timeLayout
+}
+
+// ResetTimeLayout restores the default global time layout.
+func ResetTimeLayout() {
+	timeMux.Lock()
+	timeLayout = tagTimeFormat
+	timeMux.Unlock()
 }
 
 func parse(receiver any, tagKey string, data map[string][]string) error {
@@ -162,6 +201,13 @@ func cachedFields(typ reflect.Type) []fieldMeta {
 	return actual.([]fieldMeta)
 }
 
+func fieldTimeLayout(field reflect.StructField) string {
+	if v := field.Tag.Get(timeLayoutTagKey); v != "" {
+		return v
+	}
+	return TimeLayout()
+}
+
 func bindValueToField(field reflect.StructField, value reflect.Value, tagKey string, data map[string][]string) error {
 	valueKind := value.Kind()
 	tag := field.Tag.Get(tagKey)
@@ -212,7 +258,8 @@ func bindValueToField(field reflect.StructField, value reflect.Value, tagKey str
 
 	// handle time.Time specifically
 	if value.Type() == timeType {
-		t, err := time.Parse(tagTimeFormat, inputValue[0])
+		layout := fieldTimeLayout(field)
+		t, err := time.Parse(layout, inputValue[0])
 		if err != nil {
 			return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, inputValue[0], err)
 		}

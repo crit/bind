@@ -116,10 +116,27 @@ Collection support:
 
 ## Time format
 
-`time.Time` parsing uses a fixed layout:
+Default `time.Time` parsing layout:
 
 ```text
 2006-01-02
+```
+
+You can configure time parsing globally:
+
+```go
+if err := bind.SetTimeLayout("02-01-2006"); err != nil {
+	return err
+}
+defer bind.ResetTimeLayout()
+```
+
+Or override per field using `time_layout`:
+
+```go
+type Config struct {
+	Birthday time.Time `env:"BIRTHDAY" time_layout:"2006/01/02"`
+}
 ```
 
 If parsing fails, bind returns `ErrFieldTimeFormat`.

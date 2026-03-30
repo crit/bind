@@ -135,6 +135,19 @@ func TestEnvError_Slice(t *testing.T) {
 	require.ErrorIs(t, err, ErrFieldSliceType)
 }
 
+func TestEnv_TimeLayoutTagOverride(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_TIME", "2022/11/10")
+	defer os.Unsetenv("BIND_TEST_ENV_TIME")
+
+	receiver := struct {
+		Data time.Time `env:"BIND_TEST_ENV_TIME" time_layout:"2006/01/02"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC), receiver.Data)
+}
+
 func TestEnvError_Time(t *testing.T) {
 	os.Setenv("BIND_TEST_ENV_TIME", "a,b,c")
 	defer os.Unsetenv("BIND_TEST_ENV_TIME")
