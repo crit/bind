@@ -61,6 +61,31 @@ func TestEnv_DefaultValue(t *testing.T) {
 	assert.Equal(t, 23, receiver.Data)
 }
 
+func TestEnv_EmptyEnvValue_DoesNotUseDefault(t *testing.T) {
+	os.Setenv("BIND_TEST_EMPTY_VALUE", "")
+	defer os.Unsetenv("BIND_TEST_EMPTY_VALUE")
+
+	receiver := struct {
+		Data string `env:"BIND_TEST_EMPTY_VALUE" default:"fallback"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, "", receiver.Data)
+}
+
+func TestEnv_UnsetEnvValue_UsesDefault(t *testing.T) {
+	os.Unsetenv("BIND_TEST_UNSET_VALUE")
+
+	receiver := struct {
+		Data string `env:"BIND_TEST_UNSET_VALUE" default:"fallback"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, "fallback", receiver.Data)
+}
+
 func TestEnvError_NonStruct(t *testing.T) {
 	receiver := 1
 

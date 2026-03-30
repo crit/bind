@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+// Env binds environment variables to struct fields tagged with `env`.
+//
+// Semantics:
+// - If an env var is set (including set to an empty string), that value is used.
+// - If an env var is not set, the `default` tag is used when present.
 func Env(receiver any) error {
 	if receiver == nil {
 		return nil
@@ -44,14 +49,13 @@ func Env(receiver any) error {
 			continue // This property of the struct isn't bindable.
 		}
 
-		envValue := os.Getenv(tag)
-		if envValue == "" {
+		envValue, exists := os.LookupEnv(tag)
+		if !exists {
 			// get default value if defined
 			envValue = field.Tag.Get(defaultTagKey)
-		}
-
-		if envValue == "" {
-			continue // This property doesn't exist in the env and default isn't set.
+			if envValue == "" {
+				continue // This property doesn't exist in the env and default isn't set.
+			}
 		}
 
 		// Slice isn't yet supported; TODO: parse env value as csv to populate slice

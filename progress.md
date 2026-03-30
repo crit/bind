@@ -32,9 +32,9 @@
 
 ## Epic 4: Improve Environment Variable Semantics
 
-- [ ] Replace `os.Getenv` with `os.LookupEnv` in `Env` binding.
-- [ ] Define behavior for empty env var values vs unset env vars.
-- [ ] Ensure default-tag fallback behavior is documented and tested.
+- [x] Replace `os.Getenv` with `os.LookupEnv` in `Env` binding.
+- [x] Define behavior for empty env var values vs unset env vars.
+- [x] Ensure default-tag fallback behavior is documented and tested.
 
 ## Epic 5: Consistent Error and No-Op Behavior
 
