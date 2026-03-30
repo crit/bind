@@ -324,7 +324,7 @@ func parseCSVValues(raw string) ([]string, error) {
 func setSliceFromCSV(fieldName string, value reflect.Value, raw string) error {
 	values, err := parseCSVValues(raw)
 	if err != nil {
-		return fmt.Errorf("%s is an %w", fieldName, fmt.Errorf("%w for %s: %w", ErrFieldCSVFormat, raw, err))
+		return fmt.Errorf("%s is an %w", fieldName, fmt.Errorf("%w for %s: %v", ErrFieldCSVFormat, raw, err))
 	}
 
 	sliceOf := value.Type().Elem().Kind()
