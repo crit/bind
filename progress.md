@@ -45,11 +45,11 @@
 
 ## Epic 6: CI and Repository Hygiene
 
-- [ ] Update GitHub Actions Go version to match or exceed `go.mod` (`go 1.19`).
-- [ ] Add version matrix if multi-version support is desired.
-- [ ] Remove debug/build artifacts from repository (e.g. `tmp/__debug_bin*`).
-- [ ] Expand `.gitignore` to prevent committing local binaries/artifacts.
-- [ ] Confirm CI runs cleanly with `go build ./...` and `go test ./...`.
+- [x] Update GitHub Actions Go version to match or exceed `go.mod` (`go 1.19`).
+- [x] Add version matrix if multi-version support is desired.
+- [x] Remove debug/build artifacts from repository (e.g. `tmp/__debug_bin*`).
+- [x] Expand `.gitignore` to prevent committing local binaries/artifacts.
+- [x] Confirm CI runs cleanly with `go build ./...` and `go test ./...`.
 
 ## Epic 7: Documentation and Developer Experience
 

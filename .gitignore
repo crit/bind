@@ -1,1 +1,8 @@
-tmp
+# Keep tmp source files (examples), but ignore local/debug build artifacts
+/example/__debug_bin*
+/example/main
+
+# Common Go build/test artifacts
+*.test
+*.out
+coverage.out
