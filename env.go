@@ -63,9 +63,12 @@ func Env(receiver any) error {
 			}
 		}
 
-		// Slice isn't yet supported; TODO: parse env value as csv to populate slice
+		// Slice is supported via CSV parsing.
 		if valueKind == reflect.Slice {
-			return fmt.Errorf("%w: %s", ErrFieldSliceType, field.Name)
+			if err := setSliceFromCSV(field.Name, value, envValue); err != nil {
+				return err
+			}
+			continue
 		}
 
 		// handle time.Time specifically

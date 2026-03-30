@@ -123,7 +123,7 @@ func TestEnvError_AnonStructField(t *testing.T) {
 	require.ErrorIs(t, err, ErrFieldAnonymousStruct)
 }
 
-func TestEnvError_Slice(t *testing.T) {
+func TestEnv_SliceCSV(t *testing.T) {
 	os.Setenv("BIND_TEST_ENV_SLICE", "a,b,c")
 	defer os.Unsetenv("BIND_TEST_ENV_SLICE")
 
@@ -132,7 +132,33 @@ func TestEnvError_Slice(t *testing.T) {
 	}{}
 
 	err := Env(&receiver)
-	require.ErrorIs(t, err, ErrFieldSliceType)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b", "c"}, receiver.Data)
+}
+
+func TestEnv_SliceCSV_Quoted(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_SLICE", "\"a,b\",c")
+	defer os.Unsetenv("BIND_TEST_ENV_SLICE")
+
+	receiver := struct {
+		Data []string `env:"BIND_TEST_ENV_SLICE"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "c"}, receiver.Data)
+}
+
+func TestEnvError_SliceCSVMalformed(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_SLICE", "\"a,b")
+	defer os.Unsetenv("BIND_TEST_ENV_SLICE")
+
+	receiver := struct {
+		Data []string `env:"BIND_TEST_ENV_SLICE"`
+	}{}
+
+	err := Env(&receiver)
+	require.ErrorIs(t, err, ErrFieldCSVFormat)
 }
 
 func TestEnv_TimeLayoutTagOverride(t *testing.T) {

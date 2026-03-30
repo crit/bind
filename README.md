@@ -111,8 +111,8 @@ Scalar types:
 
 Collection support:
 - `Query`/`Form`/`Header`: supports slices (`[]T`) of supported scalar element types.
-- `Env`: slice fields are currently **not supported**.
-- `Flag`: slice fields are currently **not supported**.
+- `Env`: supports slices via CSV input (e.g. `A,B,C`).
+- `Flag`: supports slices via CSV input (e.g. `-names=A,B,C`).
 
 ## Time format
 
@@ -148,8 +148,7 @@ If parsing fails, bind returns `ErrFieldTimeFormat`.
 
 ## Known limitations
 
-- No custom time layout configuration yet.
-- No built-in CSV parsing for env/flag slices.
+- No custom delimiter configuration for CSV parsing yet (currently standard CSV semantics).
 
 ## Benchmarks
 
@@ -171,8 +170,8 @@ Example result (Apple M1):
   - Pass a pointer to a struct (or pointer to map for map binding path).
 - **"unsupported type"**
   - Field type is not currently bindable (e.g., nested struct value field).
-- **"slice is not supported on field"**
-  - Happens in `Env`/`Flag` for slice fields; use scalar fields or parse manually.
+- **"unable to parse csv"**
+  - Ensure env/flag slice values are valid CSV (quotes must be balanced).
 - **"unable to parse time"**
   - Ensure value matches `YYYY-MM-DD` (`2006-01-02`).
 - **"flag not registered with bind.RegisterFlags"**

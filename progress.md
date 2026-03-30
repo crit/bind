@@ -75,8 +75,8 @@
 
 ## Epic 10: CSV Slice Parsing for Env and Flag
 
-- [ ] Add slice binding support for `Env` using CSV parsing (e.g. `A,B,C`).
-- [ ] Add slice binding support for `Flag` using CSV parsing.
-- [ ] Use standard library csv parser.
-- [ ] Add tests for supported slice element types and malformed input.
-- [ ] Update docs and troubleshooting to reflect new slice behavior.
+- [x] Add slice binding support for `Env` using CSV parsing (e.g. `A,B,C`).
+- [x] Add slice binding support for `Flag` using CSV parsing.
+- [x] Use standard library csv parser.
+- [x] Add tests for supported slice element types and malformed input.
+- [x] Update docs and troubleshooting to reflect new slice behavior.

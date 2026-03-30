@@ -104,7 +104,7 @@ func FlagWithSet(fs *flag.FlagSet, receiver any) error {
 			continue
 		}
 		if field.Type.Kind() == reflect.Slice {
-			return fmt.Errorf("%w: %s", ErrFieldSliceType, field.Name)
+			continue // supported via CSV parsing in parse path
 		}
 	}
 

@@ -1,7 +1,9 @@
 package bind
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -235,20 +237,28 @@ func bindValueToField(field reflect.StructField, value reflect.Value, tagKey str
 		return nil // This property doesn't exist in the input data.
 	}
 
-	// Slice should populate from the data slice (converted to correct base type)
+	// Slice handling.
 	numElems := len(inputValue)
-	if valueKind == reflect.Slice && numElems > 0 {
-		sliceOf := value.Type().Elem().Kind()
-		slice := reflect.MakeSlice(value.Type(), numElems, numElems)
-
-		for j := 0; j < numElems; j++ {
-			err := setWithProperType(sliceOf, inputValue[j], slice.Index(j))
-			if err != nil { // TODO: test un-parsable type in slice
-				return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
-			}
+	if valueKind == reflect.Slice {
+		// Env/Flag provide a single raw value that should be parsed as CSV.
+		if (tagKey == envTagKey || tagKey == flagTagKey) && numElems > 0 {
+			return setSliceFromCSV(field.Name, value, inputValue[0])
 		}
 
-		value.Set(slice)
+		// Query/Form/Header populate from repeated values.
+		if numElems > 0 {
+			sliceOf := value.Type().Elem().Kind()
+			slice := reflect.MakeSlice(value.Type(), numElems, numElems)
+
+			for j := 0; j < numElems; j++ {
+				err := setWithProperType(sliceOf, inputValue[j], slice.Index(j))
+				if err != nil { // TODO: test un-parsable type in slice
+					return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
+				}
+			}
+
+			value.Set(slice)
+		}
 		return nil
 	}
 
@@ -292,6 +302,40 @@ func lookupInputValue(tag string, data map[string][]string) ([]string, bool) {
 	}
 
 	return nil, false
+}
+
+func parseCSVValues(raw string) ([]string, error) {
+	if raw == "" {
+		return []string{}, nil
+	}
+
+	r := csv.NewReader(strings.NewReader(raw))
+	r.FieldsPerRecord = -1
+	values, err := r.Read()
+	if err != nil {
+		if err == io.EOF {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+	return values, nil
+}
+
+func setSliceFromCSV(fieldName string, value reflect.Value, raw string) error {
+	values, err := parseCSVValues(raw)
+	if err != nil {
+		return fmt.Errorf("%s is an %w", fieldName, fmt.Errorf("%w for %s: %v", ErrFieldCSVFormat, raw, err))
+	}
+
+	sliceOf := value.Type().Elem().Kind()
+	slice := reflect.MakeSlice(value.Type(), len(values), len(values))
+	for i := range values {
+		if err := setWithProperType(sliceOf, values[i], slice.Index(i)); err != nil {
+			return fmt.Errorf("%s is an %w", fieldName, err)
+		}
+	}
+	value.Set(slice)
+	return nil
 }
 
 func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value) error {

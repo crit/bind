@@ -89,7 +89,7 @@ func TestFlagError_TypedNilPointer(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
-func TestFlagError_Slice(t *testing.T) {
+func TestFlag_SliceCSV(t *testing.T) {
 	flag.String("slice", "", "string value")
 	flag.Set("slice", "a,b,c")
 
@@ -99,7 +99,35 @@ func TestFlagError_Slice(t *testing.T) {
 	RegisterFlags(receiver)
 
 	err := Flag(&receiver)
-	require.ErrorIs(t, err, ErrFieldSliceType)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b", "c"}, receiver.Data)
+}
+
+func TestFlag_SliceCSV_Quoted(t *testing.T) {
+	flag.String("slice_quoted", "", "string value")
+	flag.Set("slice_quoted", "\"a,b\",c")
+
+	receiver := struct {
+		Data []string `flag:"slice_quoted"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "c"}, receiver.Data)
+}
+
+func TestFlagError_SliceCSVMalformed(t *testing.T) {
+	flag.String("slice_bad", "", "string value")
+	flag.Set("slice_bad", "\"a,b")
+
+	receiver := struct {
+		Data []string `flag:"slice_bad"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.ErrorIs(t, err, ErrFieldCSVFormat)
 }
 
 func TestFlagError_Time(t *testing.T) {
