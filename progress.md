@@ -53,11 +53,11 @@
 
 ## Epic 7: Documentation and Developer Experience
 
-- [ ] Add `README.md` with package overview and usage examples.
-- [ ] Document supported tags: `query`, `form`, `header`, `env`, `flag`, `default`.
-- [ ] Document supported field types and known limitations (e.g. env/flag slice support).
-- [ ] Document time format behavior (`2006-01-02`) and customization plans.
-- [ ] Add a short troubleshooting section for common binding errors.
+- [x] Add `README.md` with package overview and usage examples.
+- [x] Document supported tags: `query`, `form`, `header`, `env`, `flag`, `default`.
+- [x] Document supported field types and known limitations (e.g. env/flag slice support).
+- [x] Document time format behavior (`2006-01-02`) and customization plans.
+- [x] Add a short troubleshooting section for common binding errors.
 
 ## Epic 8: Performance and Maintainability
 

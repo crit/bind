@@ -1,0 +1,149 @@
+# bind
+
+Lightweight struct binding for Go.
+
+`bind` maps input values into struct fields using tags:
+
+- HTTP/query-style maps (`query`, `form`, `header`)
+- Environment variables (`env`)
+- Command-line flags (`flag`)
+- Fallback defaults (`default`)
+
+## Install
+
+```bash
+go get github.com/crit/bind
+```
+
+## Quick start
+
+```go
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/crit/bind"
+)
+
+type Input struct {
+	CustomerID int    `query:"customer_id"`
+	Name       string `query:"name" default:"guest"`
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	var in Input
+	if err := bind.Query(&in, r.URL.Query()); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("customer_id=%d name=%s", in.CustomerID, in.Name)
+}
+```
+
+## Supported tags
+
+- `query:"key"` — bind from map key for query params.
+- `form:"key"` — bind from map key for form values.
+- `header:"key"` — bind from map key for headers.
+- `env:"NAME"` — bind from environment variable.
+- `flag:"name"` — bind from command-line flag.
+- `default:"value"` — fallback value when input key/var is missing.
+
+## APIs
+
+### Query / Form / Header
+
+```go
+err := bind.Query(&cfg, map[string][]string{"port": {"8080"}})
+err := bind.Form(&cfg, formValues)
+err := bind.Header(&cfg, headerValues)
+```
+
+### Env
+
+```go
+err := bind.Env(&cfg)
+```
+
+Env semantics:
+- If env var is **set** (even to empty string), that value is used.
+- If env var is **unset**, `default` is used (if present).
+
+### Flag
+
+Default command-line set:
+
+```go
+if err := bind.RegisterFlags(Config{}); err != nil {
+	return err
+}
+if err := bind.Flag(&cfg); err != nil {
+	return err
+}
+```
+
+Custom `*flag.FlagSet`:
+
+```go
+fs := flag.NewFlagSet("app", flag.ContinueOnError)
+if err := bind.RegisterFlagsWithSet(fs, Config{}); err != nil {
+	return err
+}
+_ = fs.Parse([]string{"-port=8080"})
+if err := bind.FlagWithSet(fs, &cfg); err != nil {
+	return err
+}
+```
+
+## Supported field types
+
+Scalar types:
+- `int`, `int8`, `int16`, `int32`, `int64`
+- `uint`, `uint8`, `uint16`, `uint32`, `uint64`
+- `bool`
+- `float32`, `float64`
+- `string`
+- `time.Time`
+- pointers to supported scalar types
+
+Collection support:
+- `Query`/`Form`/`Header`: supports slices (`[]T`) of supported scalar element types.
+- `Env`: slice fields are currently **not supported**.
+- `Flag`: slice fields are currently **not supported**.
+
+## Time format
+
+`time.Time` parsing uses a fixed layout:
+
+```text
+2006-01-02
+```
+
+If parsing fails, bind returns `ErrFieldTimeFormat`.
+
+## Receiver behavior
+
+- Nil receiver: no-op (returns `nil`).
+- Non-pointer, typed nil pointer, or unsupported receiver kind: returns `ErrReceiverUnsupportedType`.
+
+## Known limitations
+
+- No custom time layout configuration yet.
+- No built-in CSV parsing for env/flag slices.
+- Reflection-based binding (no struct metadata cache yet).
+
+## Troubleshooting
+
+- **"receiver was not a struct"**
+  - Pass a pointer to a struct (or pointer to map for map binding path).
+- **"unsupported type"**
+  - Field type is not currently bindable (e.g., nested struct value field).
+- **"slice is not supported on field"**
+  - Happens in `Env`/`Flag` for slice fields; use scalar fields or parse manually.
+- **"unable to parse time"**
+  - Ensure value matches `YYYY-MM-DD` (`2006-01-02`).
+- **"flag not registered with bind.RegisterFlags"**
+  - Call `RegisterFlags(...)`/`RegisterFlagsWithSet(...)` before `Flag(...)`.
