@@ -14,14 +14,14 @@
 
 ## Epic 2: Harden Reflection Receiver Validation
 
-- [ ] Add shared validation helper(s) for binder entry points (`parse`, `Env`, `Flag`).
-- [ ] Validate receiver is:
-  - [ ] Non-nil.
-  - [ ] Pointer where required.
-  - [ ] Non-nil pointer value.
-  - [ ] Struct (or supported map path).
-- [ ] Replace panic-prone reflection assumptions (`.Elem()` on invalid values).
-- [ ] Add tests for invalid receiver inputs (non-pointer, typed nil pointer, nil interface).
+- [x] Add shared validation helper(s) for binder entry points (`parse`, `Env`, `Flag`).
+- [x] Validate receiver is:
+  - [x] Non-nil.
+  - [x] Pointer where required.
+  - [x] Non-nil pointer value.
+  - [x] Struct (or supported map path).
+- [x] Replace panic-prone reflection assumptions (`.Elem()` on invalid values).
+- [x] Add tests for invalid receiver inputs (non-pointer, typed nil pointer, nil interface).
 
 ## Epic 3: Fix Map and Pointer Edge Cases
 

@@ -89,14 +89,13 @@ func FlagWithSet(fs *flag.FlagSet, receiver any) error {
 		return fmt.Errorf("%w: nil FlagSet", ErrUnknown)
 	}
 
-	receiverType := reflect.TypeOf(receiver)
-	if receiverType.Kind() != reflect.Ptr || receiverType.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, receiverType.Kind().String())
+	receiverType, _, err := receiverElem(receiver, false)
+	if err != nil {
+		return err
 	}
 
-	receiverElem := receiverType.Elem()
-	for i := 0; i < receiverElem.NumField(); i++ {
-		field := receiverElem.Field(i)
+	for i := 0; i < receiverType.NumField(); i++ {
+		field := receiverType.Field(i)
 		if field.Tag.Get(flagTagKey) == "" {
 			continue
 		}

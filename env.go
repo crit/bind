@@ -12,12 +12,9 @@ func Env(receiver any) error {
 		return nil
 	}
 
-	typ := reflect.TypeOf(receiver).Elem()
-	val := reflect.ValueOf(receiver).Elem()
-
-	// We do not have a struct, error.
-	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
+	typ, val, err := receiverElem(receiver, false)
+	if err != nil {
+		return err
 	}
 
 	// Loop over all the fields in the struct.
@@ -25,10 +22,11 @@ func Env(receiver any) error {
 		field := typ.Field(i)
 		value := val.Field(i)
 
-		if field.Anonymous {
-			if value.Kind() == reflect.Ptr {
-				value = value.Elem()
+		if field.Anonymous && value.Kind() == reflect.Ptr {
+			if value.IsNil() {
+				continue
 			}
+			value = value.Elem()
 		}
 
 		if !value.CanSet() {
@@ -73,7 +71,7 @@ func Env(receiver any) error {
 		}
 
 		// Not a slice, add first string in data for this struct field to the struct.
-		err := setWithProperType(field.Type.Kind(), envValue, value)
+		err = setWithProperType(field.Type.Kind(), envValue, value)
 		if err != nil {
 			return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
 		}

@@ -94,6 +94,20 @@ func TestParseError_NonStruct(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
+func TestParseError_NonPointerReceiver(t *testing.T) {
+	receiver := TestReceiver{}
+
+	err := parse(receiver, "test", TestData)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestParseError_TypedNilPointer(t *testing.T) {
+	var receiver *TestReceiver
+
+	err := parse(receiver, "test", TestData)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
 func TestParseError_Time(t *testing.T) {
 	data := map[string][]string{
 		"date": {"abc"},

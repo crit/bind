@@ -68,6 +68,20 @@ func TestEnvError_NonStruct(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
+func TestEnvError_NonPointerReceiver(t *testing.T) {
+	receiver := TestReceiver{}
+
+	err := Env(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestEnvError_TypedNilPointer(t *testing.T) {
+	var receiver *TestReceiver
+
+	err := Env(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
 func TestEnvError_AnonStructField(t *testing.T) {
 	t.Skip("unable to create an accurate test case")
 

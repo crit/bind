@@ -50,13 +50,44 @@ func Header(receiver any, data map[string][]string) error {
 	return parse(receiver, headerTagKey, data)
 }
 
+func receiverElem(receiver any, allowMap bool) (reflect.Type, reflect.Value, error) {
+	typ := reflect.TypeOf(receiver)
+	if typ == nil {
+		return nil, reflect.Value{}, fmt.Errorf("%w; got <nil>", ErrReceiverUnsupportedType)
+	}
+
+	val := reflect.ValueOf(receiver)
+	if typ.Kind() != reflect.Ptr {
+		return nil, reflect.Value{}, fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
+	}
+
+	if val.IsNil() {
+		return nil, reflect.Value{}, fmt.Errorf("%w; got nil pointer", ErrReceiverUnsupportedType)
+	}
+
+	elemType := typ.Elem()
+	elemVal := val.Elem()
+
+	if allowMap && elemType.Kind() == reflect.Map {
+		return elemType, elemVal, nil
+	}
+
+	if elemType.Kind() != reflect.Struct {
+		return nil, reflect.Value{}, fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, elemType.Kind().String())
+	}
+
+	return elemType, elemVal, nil
+}
+
 func parse(receiver any, tagKey string, data map[string][]string) error {
 	if receiver == nil || data == nil {
 		return nil
 	}
 
-	typ := reflect.TypeOf(receiver).Elem()
-	val := reflect.ValueOf(receiver).Elem()
+	typ, val, err := receiverElem(receiver, true)
+	if err != nil {
+		return err
+	}
 
 	// Receiver is a map, so copy data to receiver.
 	if typ.Kind() == reflect.Map {
@@ -67,20 +98,16 @@ func parse(receiver any, tagKey string, data map[string][]string) error {
 		return nil
 	}
 
-	// We do not have a struct, error.
-	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
-	}
-
 	// Loop over all the fields in the struct.
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		value := val.Field(i)
 
-		if field.Anonymous {
-			if value.Kind() == reflect.Ptr {
-				value = value.Elem()
+		if field.Anonymous && value.Kind() == reflect.Ptr {
+			if value.IsNil() {
+				continue
 			}
+			value = value.Elem()
 		}
 
 		if !value.CanSet() {

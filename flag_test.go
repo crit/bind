@@ -75,6 +75,20 @@ func TestFlagError_NonStruct(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
+func TestFlagError_NonPointerReceiver(t *testing.T) {
+	receiver := TestReceiver{}
+
+	err := Flag(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestFlagError_TypedNilPointer(t *testing.T) {
+	var receiver *TestReceiver
+
+	err := Flag(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
 func TestFlagError_Slice(t *testing.T) {
 	flag.String("slice", "", "string value")
 	flag.Set("slice", "a,b,c")
