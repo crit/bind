@@ -2,15 +2,15 @@
 
 ## Epic 1: Stabilize and Correct Flag Binding
 
-- [ ] Fix `RegisterFlags` so it reads parsed flag values (not registration-time defaults).
-- [ ] Remove `log.Fatal` from `RegisterFlags`; return errors instead.
-- [ ] Refactor API to support `*flag.FlagSet` instead of relying only on global `flag.CommandLine`.
-- [ ] Add tests for:
-  - [ ] Parsed values are correctly bound.
-  - [ ] Default values are used when no flag is passed.
-  - [ ] Duplicate registration behavior.
-  - [ ] Error paths without process termination.
-- [ ] Ensure `go test ./...` passes for all flag-related tests.
+- [x] Fix `RegisterFlags` so it reads parsed flag values (not registration-time defaults).
+- [x] Remove `log.Fatal` from `RegisterFlags`; return errors instead.
+- [x] Refactor API to support `*flag.FlagSet` instead of relying only on global `flag.CommandLine`.
+- [x] Add tests for:
+  - [x] Parsed values are correctly bound.
+  - [x] Default values are used when no flag is passed.
+  - [x] Duplicate registration behavior.
+  - [x] Error paths without process termination.
+- [x] Ensure `go test ./...` passes for all flag-related tests.
 
 ## Epic 2: Harden Reflection Receiver Validation
 
