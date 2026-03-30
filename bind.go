@@ -45,8 +45,6 @@ var (
 	structFieldCache sync.Map // map[reflect.Type][]fieldMeta
 )
 
-// TODO: look at github.com/go-playground/validator/v10 struct caching tech to make improvements here.
-
 // Query binds query-string values into receiver using `query` tags.
 //
 // Nil receiver is treated as a no-op. Non-pointer or unsupported receiver

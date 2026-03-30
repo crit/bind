@@ -65,3 +65,18 @@
 - [x] Add benchmarks for parse/env/flag workflows.
 - [x] Refactor common binding logic to reduce duplication and improve readability.
 - [x] Keep error messages consistent and actionable.
+
+## Epic 9: Configurable Time Layout Support
+
+- [ ] Add support for configurable time layout (global option and/or per-field tag override).
+- [ ] Preserve current default layout (`2006-01-02`) for backward compatibility.
+- [ ] Add tests for custom layouts and invalid layout/value combinations.
+- [ ] Document configuration patterns and migration guidance in `README.md`.
+
+## Epic 10: CSV Slice Parsing for Env and Flag
+
+- [ ] Add slice binding support for `Env` using CSV parsing (e.g. `A,B,C`).
+- [ ] Add slice binding support for `Flag` using CSV parsing.
+- [ ] Use standard library csv parser.
+- [ ] Add tests for supported slice element types and malformed input.
+- [ ] Update docs and troubleshooting to reflect new slice behavior.
