@@ -38,14 +38,26 @@ var (
 
 // TODO: look at github.com/go-playground/validator/v10 struct caching tech to make improvements here.
 
+// Query binds query-string values into receiver using `query` tags.
+//
+// Nil receiver is treated as a no-op. Non-pointer or unsupported receiver
+// types return ErrReceiverUnsupportedType.
 func Query(receiver any, data map[string][]string) error {
 	return parse(receiver, queryTagKey, data)
 }
 
+// Form binds form values into receiver using `form` tags.
+//
+// Nil receiver is treated as a no-op. Non-pointer or unsupported receiver
+// types return ErrReceiverUnsupportedType.
 func Form(receiver any, data map[string][]string) error {
 	return parse(receiver, formTagKey, data)
 }
 
+// Header binds header values into receiver using `header` tags.
+//
+// Nil receiver is treated as a no-op. Non-pointer or unsupported receiver
+// types return ErrReceiverUnsupportedType.
 func Header(receiver any, data map[string][]string) error {
 	return parse(receiver, headerTagKey, data)
 }

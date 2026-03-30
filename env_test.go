@@ -48,7 +48,7 @@ func TestEnv(t *testing.T) {
 
 func TestEnv_NilReceiver(t *testing.T) {
 	err := Env(nil)
-	require.Nil(t, err) // Env did nothing, no error even if unintentional.
+	require.Nil(t, err)
 }
 
 func TestEnv_DefaultValue(t *testing.T) {

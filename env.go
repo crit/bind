@@ -9,7 +9,12 @@ import (
 
 // Env binds environment variables to struct fields tagged with `env`.
 //
-// Semantics:
+// Receiver behavior:
+// - Nil receiver is a no-op.
+// - Non-pointer, typed nil pointer, or unsupported receiver kinds return
+//   ErrReceiverUnsupportedType.
+//
+// Value semantics:
 // - If an env var is set (including set to an empty string), that value is used.
 // - If an env var is not set, the `default` tag is used when present.
 func Env(receiver any) error {

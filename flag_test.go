@@ -52,7 +52,7 @@ func TestFlag(t *testing.T) {
 
 func TestFlag_NilReceiver(t *testing.T) {
 	err := Flag(nil)
-	require.Nil(t, err) // Flag did nothing, no error even if unintentional
+	require.Nil(t, err)
 }
 
 func TestFlag_DefaultValue(t *testing.T) {

@@ -108,6 +108,11 @@ func TestParseError_TypedNilPointer(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
+func TestParse_NilReceiver_IsNoOp(t *testing.T) {
+	err := parse(nil, "test", TestData)
+	require.NoError(t, err)
+}
+
 func TestParseError_Time(t *testing.T) {
 	data := map[string][]string{
 		"date": {"abc"},

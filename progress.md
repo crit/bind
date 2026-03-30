@@ -38,10 +38,10 @@
 
 ## Epic 5: Consistent Error and No-Op Behavior
 
-- [ ] Define expected behavior for nil receivers across all binders.
-- [ ] Decide and document whether nil receiver should return error or no-op.
-- [ ] Normalize returned errors for unsupported receiver types.
-- [ ] Add/adjust tests to match the finalized contract.
+- [x] Define expected behavior for nil receivers across all binders.
+- [x] nil receiver should return no-op.
+- [x] Normalize returned errors for unsupported receiver types.
+- [x] Add/adjust tests to match the finalized contract.
 
 ## Epic 6: CI and Repository Hygiene
 

@@ -77,6 +77,10 @@ func RegisterFlagsWithSet(fs *flag.FlagSet, receivers ...any) error {
 	return nil
 }
 
+// Flag binds values from the default command-line FlagSet into receiver.
+//
+// Nil receiver is a no-op. Non-pointer, typed nil pointer, or unsupported
+// receiver kinds return ErrReceiverUnsupportedType.
 func Flag(receiver any) error {
 	return FlagWithSet(flag.CommandLine, receiver)
 }
