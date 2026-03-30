@@ -108,15 +108,12 @@ func TestEnvError_TypedNilPointer(t *testing.T) {
 }
 
 func TestEnvError_AnonStructField(t *testing.T) {
-	t.Skip("unable to create an accurate test case")
-
-	os.Setenv("BIND_TEST_ENV_ANON_STRUCT_FIELD", "23")
-	defer os.Unsetenv("BIND_TEST_ENV_ANON_STRUCT_FIELD")
+	type Embedded struct {
+		Value int
+	}
 
 	receiver := struct {
-		Data struct {
-			Value int
-		} `env:"BIND_TEST_ENV_ANON_STRUCT_FIELD"`
+		Embedded `env:"BIND_TEST_ENV_ANON_STRUCT_FIELD"`
 	}{}
 
 	err := Env(&receiver)
