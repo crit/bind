@@ -48,7 +48,7 @@ func TestEnv(t *testing.T) {
 
 func TestEnv_NilReceiver(t *testing.T) {
 	err := Env(nil)
-	require.Nil(t, err) // Env did nothing, no error even if unintentional.
+	require.Nil(t, err)
 }
 
 func TestEnv_DefaultValue(t *testing.T) {
@@ -61,6 +61,31 @@ func TestEnv_DefaultValue(t *testing.T) {
 	assert.Equal(t, 23, receiver.Data)
 }
 
+func TestEnv_EmptyEnvValue_DoesNotUseDefault(t *testing.T) {
+	os.Setenv("BIND_TEST_EMPTY_VALUE", "")
+	defer os.Unsetenv("BIND_TEST_EMPTY_VALUE")
+
+	receiver := struct {
+		Data string `env:"BIND_TEST_EMPTY_VALUE" default:"fallback"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, "", receiver.Data)
+}
+
+func TestEnv_UnsetEnvValue_UsesDefault(t *testing.T) {
+	os.Unsetenv("BIND_TEST_UNSET_VALUE")
+
+	receiver := struct {
+		Data string `env:"BIND_TEST_UNSET_VALUE" default:"fallback"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, "fallback", receiver.Data)
+}
+
 func TestEnvError_NonStruct(t *testing.T) {
 	receiver := 1
 
@@ -68,23 +93,34 @@ func TestEnvError_NonStruct(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
-func TestEnvError_AnonStructField(t *testing.T) {
-	t.Skip("unable to create an accurate test case")
+func TestEnvError_NonPointerReceiver(t *testing.T) {
+	receiver := TestReceiver{}
 
-	os.Setenv("BIND_TEST_ENV_ANON_STRUCT_FIELD", "23")
-	defer os.Unsetenv("BIND_TEST_ENV_ANON_STRUCT_FIELD")
+	err := Env(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestEnvError_TypedNilPointer(t *testing.T) {
+	var receiver *TestReceiver
+
+	err := Env(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestEnvError_AnonStructField(t *testing.T) {
+	type Embedded struct {
+		Value int
+	}
 
 	receiver := struct {
-		Data struct {
-			Value int
-		} `env:"BIND_TEST_ENV_ANON_STRUCT_FIELD"`
+		Embedded `env:"BIND_TEST_ENV_ANON_STRUCT_FIELD"`
 	}{}
 
 	err := Env(&receiver)
 	require.ErrorIs(t, err, ErrFieldAnonymousStruct)
 }
 
-func TestEnvError_Slice(t *testing.T) {
+func TestEnv_SliceCSV(t *testing.T) {
 	os.Setenv("BIND_TEST_ENV_SLICE", "a,b,c")
 	defer os.Unsetenv("BIND_TEST_ENV_SLICE")
 
@@ -93,7 +129,61 @@ func TestEnvError_Slice(t *testing.T) {
 	}{}
 
 	err := Env(&receiver)
-	require.ErrorIs(t, err, ErrFieldSliceType)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b", "c"}, receiver.Data)
+}
+
+func TestEnv_SliceCSV_Quoted(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_SLICE", "\"a,b\",c")
+	defer os.Unsetenv("BIND_TEST_ENV_SLICE")
+
+	receiver := struct {
+		Data []string `env:"BIND_TEST_ENV_SLICE"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "c"}, receiver.Data)
+}
+
+func TestEnvError_SliceCSVMalformed(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_SLICE", "\"a,b")
+	defer os.Unsetenv("BIND_TEST_ENV_SLICE")
+
+	receiver := struct {
+		Data []string `env:"BIND_TEST_ENV_SLICE"`
+	}{}
+
+	err := Env(&receiver)
+	require.ErrorIs(t, err, ErrFieldCSVFormat)
+	assert.ErrorContains(t, err, "Data is an")
+}
+
+func TestEnvError_SliceCSV_UnparseableElement(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_SLICE_INT", "1,abc")
+	defer os.Unsetenv("BIND_TEST_ENV_SLICE_INT")
+
+	receiver := struct {
+		Data []int `env:"BIND_TEST_ENV_SLICE_INT"`
+	}{}
+
+	err := Env(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid syntax")
+}
+
+func TestEnv_TimeLayoutTagOverride(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_TIME", "2022/11/10")
+	defer os.Unsetenv("BIND_TEST_ENV_TIME")
+
+	receiver := struct {
+		Data time.Time `env:"BIND_TEST_ENV_TIME" time_layout:"2006/01/02"`
+	}{}
+
+	err := Env(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC), receiver.Data)
 }
 
 func TestEnvError_Time(t *testing.T) {

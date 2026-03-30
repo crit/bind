@@ -24,10 +24,10 @@ type TestReceiver struct {
 	Float64       float64   `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
 	String        string    `env:"BIND_TEST_VALUE_STRING" test:"string" flag:"string"`
 	Time          time.Time `env:"BIND_TEST_VALUE_TIME" test:"time" flag:"time"`
-	SliceInt      []int     `test:"slice_int"`    // TODO: env/flag support
-	SliceBool     []bool    `test:"slice_bool"`   // TODO: env/flag support
-	SliceFloat    []float64 `test:"slice_float"`  // TODO: env/flag support
-	SliceString   []string  `test:"slice_string"` // TODO: env/flag support
+	SliceInt      []int     `test:"slice_int"`
+	SliceBool     []bool    `test:"slice_bool"`
+	SliceFloat    []float64 `test:"slice_float"`
+	SliceString   []string  `test:"slice_string"`
 	StrangeCasing string    `test:"strange_casing"`
 }
 
@@ -94,6 +94,61 @@ func TestParseError_NonStruct(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
+func TestParseError_NonPointerReceiver(t *testing.T) {
+	receiver := TestReceiver{}
+
+	err := parse(receiver, "test", TestData)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestParseError_TypedNilPointer(t *testing.T) {
+	var receiver *TestReceiver
+
+	err := parse(receiver, "test", TestData)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestParse_NilReceiver_IsNoOp(t *testing.T) {
+	err := parse(nil, "test", TestData)
+	require.NoError(t, err)
+}
+
+func TestParse_TimeLayoutTagOverride(t *testing.T) {
+	data := map[string][]string{
+		"date": {"2022/11/10"},
+	}
+
+	receiver := struct {
+		Date time.Time `test:"date" time_layout:"2006/01/02"`
+	}{}
+
+	err := parse(&receiver, "test", data)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC), receiver.Date)
+}
+
+func TestParse_TimeLayoutGlobalConfig(t *testing.T) {
+	defer ResetTimeLayout()
+	require.NoError(t, SetTimeLayout("02-01-2006"))
+
+	data := map[string][]string{
+		"date": {"10-11-2022"},
+	}
+
+	receiver := struct {
+		Date time.Time `test:"date"`
+	}{}
+
+	err := parse(&receiver, "test", data)
+	require.NoError(t, err)
+	assert.Equal(t, time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC), receiver.Date)
+}
+
+func TestSetTimeLayoutError_Empty(t *testing.T) {
+	err := SetTimeLayout("")
+	require.ErrorIs(t, err, ErrInvalidTimeLayout)
+}
+
 func TestParseError_Time(t *testing.T) {
 	data := map[string][]string{
 		"date": {"abc"},
@@ -101,6 +156,19 @@ func TestParseError_Time(t *testing.T) {
 
 	receiver := struct {
 		Date time.Time `test:"date"`
+	}{}
+
+	err := parse(&receiver, "test", data)
+	require.ErrorIs(t, err, ErrFieldTimeFormat)
+}
+
+func TestParseError_Time_CustomLayoutMismatch(t *testing.T) {
+	data := map[string][]string{
+		"date": {"2022/11/10"},
+	}
+
+	receiver := struct {
+		Date time.Time `test:"date" time_layout:"2006-01-02"`
 	}{}
 
 	err := parse(&receiver, "test", data)
@@ -120,4 +188,44 @@ func TestParseError_FieldType(t *testing.T) {
 
 	err := parse(&receiver, "test", data)
 	require.ErrorIs(t, err, ErrFieldUnsupportedType)
+}
+
+func TestParse_MapReceiver_InitializesNilMapAndSkipsEmptyValues(t *testing.T) {
+	var receiver map[string]string
+	data := map[string][]string{
+		"a": {"1"},
+		"b": {},
+		"c": {"3", "ignored"},
+	}
+
+	err := parse(&receiver, "test", data)
+	require.NoError(t, err)
+
+	expected := map[string]string{
+		"a": "1",
+		"c": "3",
+	}
+	assert.Equal(t, expected, receiver)
+}
+
+func TestParse_PointerField_AllocatesNilPointer(t *testing.T) {
+	receiver := struct {
+		Data *int `test:"data"`
+	}{}
+
+	err := parse(&receiver, "test", map[string][]string{"data": {"23"}})
+	require.NoError(t, err)
+	require.NotNil(t, receiver.Data)
+	assert.Equal(t, 23, *receiver.Data)
+}
+
+func TestParseError_SliceElement_Unparseable(t *testing.T) {
+	receiver := struct {
+		Data []int `test:"data"`
+	}{}
+
+	err := parse(&receiver, "test", map[string][]string{"data": {"1", "abc"}})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid syntax")
 }

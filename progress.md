@@ -1,0 +1,89 @@
+# Progress Plan
+
+## Epic 1: Stabilize and Correct Flag Binding
+
+- [x] Fix `RegisterFlags` so it reads parsed flag values (not registration-time defaults).
+- [x] Remove `log.Fatal` from `RegisterFlags`; return errors instead.
+- [x] Refactor API to support `*flag.FlagSet` instead of relying only on global `flag.CommandLine`.
+- [x] Add tests for:
+  - [x] Parsed values are correctly bound.
+  - [x] Default values are used when no flag is passed.
+  - [x] Duplicate registration behavior.
+  - [x] Error paths without process termination.
+- [x] Ensure `go test ./...` passes for all flag-related tests.
+
+## Epic 2: Harden Reflection Receiver Validation
+
+- [x] Add shared validation helper(s) for binder entry points (`parse`, `Env`, `Flag`).
+- [x] Validate receiver is:
+  - [x] Non-nil.
+  - [x] Pointer where required.
+  - [x] Non-nil pointer value.
+  - [x] Struct (or supported map path).
+- [x] Replace panic-prone reflection assumptions (`.Elem()` on invalid values).
+- [x] Add tests for invalid receiver inputs (non-pointer, typed nil pointer, nil interface).
+
+## Epic 3: Fix Map and Pointer Edge Cases
+
+- [x] In map binding path, guard against empty value slices before indexing `v[0]`.
+- [x] Initialize map receiver when nil before calling `SetMapIndex`.
+- [x] In pointer field binding, allocate nil pointers before recursive set.
+- [x] Add tests for map and pointer edge cases.
+
+## Epic 4: Improve Environment Variable Semantics
+
+- [x] Replace `os.Getenv` with `os.LookupEnv` in `Env` binding.
+- [x] Define behavior for empty env var values vs unset env vars.
+- [x] Ensure default-tag fallback behavior is documented and tested.
+
+## Epic 5: Consistent Error and No-Op Behavior
+
+- [x] Define expected behavior for nil receivers across all binders.
+- [x] nil receiver should return no-op.
+- [x] Normalize returned errors for unsupported receiver types.
+- [x] Add/adjust tests to match the finalized contract.
+
+## Epic 6: CI and Repository Hygiene
+
+- [x] Update GitHub Actions Go version to match or exceed `go.mod` (`go 1.19`).
+- [x] Add version matrix if multi-version support is desired.
+- [x] Remove debug/build artifacts from repository (e.g. `tmp/__debug_bin*`).
+- [x] Expand `.gitignore` to prevent committing local binaries/artifacts.
+- [x] Confirm CI runs cleanly with `go build ./...` and `go test ./...`.
+
+## Epic 7: Documentation and Developer Experience
+
+- [x] Add `README.md` with package overview and usage examples.
+- [x] Document supported tags: `query`, `form`, `header`, `env`, `flag`, `default`.
+- [x] Document supported field types and known limitations (e.g. env/flag slice support).
+- [x] Document time format behavior (`2006-01-02`) and customization plans.
+- [x] Add a short troubleshooting section for common binding errors.
+
+## Epic 8: Performance and Maintainability
+
+- [x] Evaluate caching of struct metadata to reduce reflection overhead.
+- [x] Add benchmarks for parse/env/flag workflows.
+- [x] Refactor common binding logic to reduce duplication and improve readability.
+- [x] Keep error messages consistent and actionable.
+
+## Epic 9: Configurable Time Layout Support
+
+- [x] Add support for configurable time layout (global option and/or per-field tag override).
+- [x] Preserve current default layout (`2006-01-02`) for backward compatibility.
+- [x] Add tests for custom layouts and invalid layout/value combinations.
+- [x] Document configuration patterns and migration guidance in `README.md`.
+
+## Epic 10: CSV Slice Parsing for Env and Flag
+
+- [x] Add slice binding support for `Env` using CSV parsing (e.g. `A,B,C`).
+- [x] Add slice binding support for `Flag` using CSV parsing.
+- [x] Use standard library csv parser.
+- [x] Add tests for supported slice element types and malformed input.
+- [x] Update docs and troubleshooting to reflect new slice behavior.
+
+## Epic 11: Slice Parsing Test Coverage Follow-ups
+
+- [x] Add tests for unparseable slice element values in `Query`/`Form`/`Header` (e.g. `[]int` with non-numeric values).
+- [x] Add tests for unparseable slice element values in `Env` CSV parsing.
+- [x] Add tests for unparseable slice element values in `Flag` CSV parsing.
+- [x] Ensure errors are clear and consistently include field name + root parse error.

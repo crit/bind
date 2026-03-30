@@ -7,17 +7,24 @@ import (
 	"time"
 )
 
+// Env binds environment variables to struct fields tagged with `env`.
+//
+// Receiver behavior:
+// - Nil receiver is a no-op.
+// - Non-pointer, typed nil pointer, or unsupported receiver kinds return
+//   ErrReceiverUnsupportedType.
+//
+// Value semantics:
+// - If an env var is set (including set to an empty string), that value is used.
+// - If an env var is not set, the `default` tag is used when present.
 func Env(receiver any) error {
 	if receiver == nil {
 		return nil
 	}
 
-	typ := reflect.TypeOf(receiver).Elem()
-	val := reflect.ValueOf(receiver).Elem()
-
-	// We do not have a struct, error.
-	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
+	typ, val, err := receiverElem(receiver, false)
+	if err != nil {
+		return err
 	}
 
 	// Loop over all the fields in the struct.
@@ -25,10 +32,11 @@ func Env(receiver any) error {
 		field := typ.Field(i)
 		value := val.Field(i)
 
-		if field.Anonymous {
-			if value.Kind() == reflect.Ptr {
-				value = value.Elem()
+		if field.Anonymous && value.Kind() == reflect.Ptr {
+			if value.IsNil() {
+				continue
 			}
+			value = value.Elem()
 		}
 
 		if !value.CanSet() {
@@ -46,24 +54,27 @@ func Env(receiver any) error {
 			continue // This property of the struct isn't bindable.
 		}
 
-		envValue := os.Getenv(tag)
-		if envValue == "" {
+		envValue, exists := os.LookupEnv(tag)
+		if !exists {
 			// get default value if defined
 			envValue = field.Tag.Get(defaultTagKey)
+			if envValue == "" {
+				continue // This property doesn't exist in the env and default isn't set.
+			}
 		}
 
-		if envValue == "" {
-			continue // This property doesn't exist in the env and default isn't set.
-		}
-
-		// Slice isn't yet supported; TODO: parse env value as csv to populate slice
+		// Slice is supported via CSV parsing.
 		if valueKind == reflect.Slice {
-			return fmt.Errorf("%w: %s", ErrFieldSliceType, field.Name)
+			if err := setSliceFromCSV(field.Name, value, envValue); err != nil {
+				return err
+			}
+			continue
 		}
 
 		// handle time.Time specifically
 		if value.Type() == timeType {
-			t, err := time.Parse(tagTimeFormat, envValue)
+			layout := fieldTimeLayout(field)
+			t, err := time.Parse(layout, envValue)
 			if err != nil {
 				return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, envValue, err)
 			}
@@ -73,7 +84,7 @@ func Env(receiver any) error {
 		}
 
 		// Not a slice, add first string in data for this struct field to the struct.
-		err := setWithProperType(field.Type.Kind(), envValue, value)
+		err = setWithProperType(field.Type.Kind(), envValue, value)
 		if err != nil {
 			return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
 		}

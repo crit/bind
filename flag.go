@@ -5,35 +5,54 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
+	"sync"
 )
 
-var registeredFlags = make(map[string]bool)
+var flagsMux = sync.Mutex{}
+var registeredFlags = make(map[string]map[string]struct{})
 
 func parseTypeKey(receiver any) string {
 	return strings.TrimLeft(fmt.Sprintf("%T", receiver), "*")
 }
 
-func RegisterFlags(receivers ...any) {
+// RegisterFlags registers all `flag` tags for the provided receiver types on the
+// default command line FlagSet.
+func RegisterFlags(receivers ...any) error {
+	return RegisterFlagsWithSet(flag.CommandLine, receivers...)
+}
+
+// RegisterFlagsWithSet registers all `flag` tags for the provided receiver types
+// on the given FlagSet.
+func RegisterFlagsWithSet(fs *flag.FlagSet, receivers ...any) error {
+	if fs == nil {
+		return fmt.Errorf("%w: nil FlagSet", ErrUnknown)
+	}
+
+	flagsMux.Lock()
+	defer flagsMux.Unlock()
+
 	for _, receiver := range receivers {
+		typ := reflect.TypeOf(receiver)
+		if typ == nil {
+			return fmt.Errorf("%w; got <nil>", ErrReceiverUnsupportedType)
+		}
+
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
+
+		if typ.Kind() != reflect.Struct {
+			return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
+		}
+
 		// Register the receiver type in the registeredFlags map
 		key := parseTypeKey(receiver)
 		if _, exists := registeredFlags[key]; exists {
 			// Skip already registered types
 			continue
 		}
-		registeredFlags[key] = true
 
-		// get struct tag for all properties of receiver
-		typ := reflect.TypeOf(receiver)
-		if typ.Kind() == reflect.Ptr {
-			typ = typ.Elem()
-		}
-
-		if typ.Kind() != reflect.Struct {
-			// receiver must be a struct or a pointer to a struct
-			return
-		}
+		registeredFlags[key] = make(map[string]struct{})
 
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
@@ -43,96 +62,65 @@ func RegisterFlags(receivers ...any) {
 				continue
 			}
 
-			if flag.Lookup(tag) != nil {
-				continue
+			if fs.Lookup(tag) == nil {
+				_ = fs.String(tag, field.Tag.Get(defaultTagKey), field.Name)
 			}
-
-			flag.String(tag, field.Tag.Get(defaultTagKey), field.Name)
+			registeredFlags[key][tag] = struct{}{}
 		}
 	}
 
-	flag.Parse()
-}
-
-func Flag(receiver any) error {
-	if receiver == nil {
-		return nil
-	}
-
-	if !registeredFlags[parseTypeKey(receiver)] {
-		return fmt.Errorf("%w: %s", ErrFlagNotRegistered, parseTypeKey(receiver))
-	}
-
-	typ := reflect.TypeOf(receiver).Elem()
-	val := reflect.ValueOf(receiver).Elem()
-
-	if typ.Kind() != reflect.Struct {
-		return fmt.Errorf("%w; got %s", ErrReceiverUnsupportedType, typ.Kind().String())
-	}
-
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		value := val.Field(i)
-
-		if field.Anonymous {
-			if value.Kind() == reflect.Ptr {
-				value = value.Elem()
-			}
-		}
-
-		if !value.CanSet() {
-			continue
-		}
-
-		valueKind := value.Kind()
-		tag := field.Tag.Get(flagTagKey)
-
-		if field.Anonymous && valueKind == reflect.Struct && tag != "" {
-			return ErrFieldAnonymousStruct
-		}
-
-		if tag == "" {
-			continue // This property of the struct isn't bindable.
-		}
-
-		var flagValue string
-		flagPtr := flag.Lookup(tag)
-
-		if flagPtr == nil {
-			// get default value from struct tag `default`
-			def := field.Tag.Get(defaultTagKey)
-
-			if def == "" {
-				continue // This property doesn't exist in the flags or have a default value
-			}
-
-			flagValue = def
-		} else {
-			flagValue = flagPtr.Value.String()
-		}
-
-		// Slice isn't yet supported; TODO: parse flag value as csv?
-		if valueKind == reflect.Slice {
-			return fmt.Errorf("%w: %s", ErrFieldSliceType, field.Name)
-		}
-
-		// handle time.Time specifically
-		if value.Type() == timeType {
-			t, err := time.Parse(tagTimeFormat, flagValue)
-			if err != nil {
-				return fmt.Errorf("%w for %s: %v", ErrFieldTimeFormat, flagValue, err)
-			}
-
-			value.Set(reflect.ValueOf(t))
-			continue
-		}
-
-		// Not a slice, add first string in data for this struct field to the struct.
-		err := setWithProperType(field.Type.Kind(), flagValue, value)
-		if err != nil {
-			return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
-		}
+	// Keep old convenience behavior for the default command line only.
+	if fs == flag.CommandLine && !flag.Parsed() {
+		flag.Parse()
 	}
 
 	return nil
+}
+
+// Flag binds values from the default command-line FlagSet into receiver.
+//
+// Nil receiver is a no-op. Non-pointer, typed nil pointer, or unsupported
+// receiver kinds return ErrReceiverUnsupportedType.
+func Flag(receiver any) error {
+	return FlagWithSet(flag.CommandLine, receiver)
+}
+
+func FlagWithSet(fs *flag.FlagSet, receiver any) error {
+	if receiver == nil {
+		return nil
+	}
+	if fs == nil {
+		return fmt.Errorf("%w: nil FlagSet", ErrUnknown)
+	}
+
+	receiverType, _, err := receiverElem(receiver, false)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < receiverType.NumField(); i++ {
+		field := receiverType.Field(i)
+		if field.Tag.Get(flagTagKey) == "" {
+			continue
+		}
+		if field.Type.Kind() == reflect.Slice {
+			continue // supported via CSV parsing in parse path
+		}
+	}
+
+	flagsMux.Lock()
+	tags, ok := registeredFlags[parseTypeKey(receiver)]
+	flagsMux.Unlock()
+	if !ok {
+		return ErrFlagNotRegistered
+	}
+
+	data := make(map[string][]string, len(tags))
+	for tag := range tags {
+		if f := fs.Lookup(tag); f != nil {
+			data[tag] = []string{f.Value.String()}
+		}
+	}
+
+	return parse(receiver, flagTagKey, data)
 }

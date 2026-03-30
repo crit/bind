@@ -47,12 +47,12 @@ func TestFlag(t *testing.T) {
 
 	err := Flag(&receiver)
 	require.Nil(t, err)
-	assert.Equal(t, receiver, expected)
+	assert.Equal(t, expected, receiver)
 }
 
 func TestFlag_NilReceiver(t *testing.T) {
 	err := Flag(nil)
-	require.Nil(t, err) // Flag did nothing, no error even if unintentional
+	require.Nil(t, err)
 }
 
 func TestFlag_DefaultValue(t *testing.T) {
@@ -75,7 +75,21 @@ func TestFlagError_NonStruct(t *testing.T) {
 	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
 }
 
-func TestFlagError_Slice(t *testing.T) {
+func TestFlagError_NonPointerReceiver(t *testing.T) {
+	receiver := TestReceiver{}
+
+	err := Flag(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestFlagError_TypedNilPointer(t *testing.T) {
+	var receiver *TestReceiver
+
+	err := Flag(receiver)
+	require.ErrorIs(t, err, ErrReceiverUnsupportedType)
+}
+
+func TestFlag_SliceCSV(t *testing.T) {
 	flag.String("slice", "", "string value")
 	flag.Set("slice", "a,b,c")
 
@@ -85,7 +99,51 @@ func TestFlagError_Slice(t *testing.T) {
 	RegisterFlags(receiver)
 
 	err := Flag(&receiver)
-	require.ErrorIs(t, err, ErrFieldSliceType)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b", "c"}, receiver.Data)
+}
+
+func TestFlag_SliceCSV_Quoted(t *testing.T) {
+	flag.String("slice_quoted", "", "string value")
+	flag.Set("slice_quoted", "\"a,b\",c")
+
+	receiver := struct {
+		Data []string `flag:"slice_quoted"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "c"}, receiver.Data)
+}
+
+func TestFlagError_SliceCSVMalformed(t *testing.T) {
+	flag.String("slice_bad", "", "string value")
+	flag.Set("slice_bad", "\"a,b")
+
+	receiver := struct {
+		Data []string `flag:"slice_bad"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.ErrorIs(t, err, ErrFieldCSVFormat)
+	assert.ErrorContains(t, err, "Data is an")
+}
+
+func TestFlagError_SliceCSV_UnparseableElement(t *testing.T) {
+	flag.String("slice_int_bad", "", "string value")
+	flag.Set("slice_int_bad", "1,abc")
+
+	receiver := struct {
+		Data []int `flag:"slice_int_bad"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid syntax")
 }
 
 func TestFlagError_Time(t *testing.T) {
