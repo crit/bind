@@ -159,6 +159,21 @@ func TestEnvError_SliceCSVMalformed(t *testing.T) {
 
 	err := Env(&receiver)
 	require.ErrorIs(t, err, ErrFieldCSVFormat)
+	assert.ErrorContains(t, err, "Data is an")
+}
+
+func TestEnvError_SliceCSV_UnparseableElement(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_SLICE_INT", "1,abc")
+	defer os.Unsetenv("BIND_TEST_ENV_SLICE_INT")
+
+	receiver := struct {
+		Data []int `env:"BIND_TEST_ENV_SLICE_INT"`
+	}{}
+
+	err := Env(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid syntax")
 }
 
 func TestEnv_TimeLayoutTagOverride(t *testing.T) {

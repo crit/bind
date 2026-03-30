@@ -80,3 +80,10 @@
 - [x] Use standard library csv parser.
 - [x] Add tests for supported slice element types and malformed input.
 - [x] Update docs and troubleshooting to reflect new slice behavior.
+
+## Epic 11: Slice Parsing Test Coverage Follow-ups
+
+- [x] Add tests for unparseable slice element values in `Query`/`Form`/`Header` (e.g. `[]int` with non-numeric values).
+- [x] Add tests for unparseable slice element values in `Env` CSV parsing.
+- [x] Add tests for unparseable slice element values in `Flag` CSV parsing.
+- [x] Ensure errors are clear and consistently include field name + root parse error.

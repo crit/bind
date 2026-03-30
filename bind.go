@@ -252,7 +252,7 @@ func bindValueToField(field reflect.StructField, value reflect.Value, tagKey str
 
 			for j := 0; j < numElems; j++ {
 				err := setWithProperType(sliceOf, inputValue[j], slice.Index(j))
-				if err != nil { // TODO: test un-parsable type in slice
+				if err != nil {
 					return fmt.Errorf("%s is an %w", field.Name, err) // <Type> is an unsupported type
 				}
 			}
@@ -324,7 +324,7 @@ func parseCSVValues(raw string) ([]string, error) {
 func setSliceFromCSV(fieldName string, value reflect.Value, raw string) error {
 	values, err := parseCSVValues(raw)
 	if err != nil {
-		return fmt.Errorf("%s is an %w", fieldName, fmt.Errorf("%w for %s: %v", ErrFieldCSVFormat, raw, err))
+		return fmt.Errorf("%s is an %w", fieldName, fmt.Errorf("%w for %s: %w", ErrFieldCSVFormat, raw, err))
 	}
 
 	sliceOf := value.Type().Elem().Kind()

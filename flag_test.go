@@ -128,6 +128,22 @@ func TestFlagError_SliceCSVMalformed(t *testing.T) {
 
 	err := Flag(&receiver)
 	require.ErrorIs(t, err, ErrFieldCSVFormat)
+	assert.ErrorContains(t, err, "Data is an")
+}
+
+func TestFlagError_SliceCSV_UnparseableElement(t *testing.T) {
+	flag.String("slice_int_bad", "", "string value")
+	flag.Set("slice_int_bad", "1,abc")
+
+	receiver := struct {
+		Data []int `flag:"slice_int_bad"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid syntax")
 }
 
 func TestFlagError_Time(t *testing.T) {

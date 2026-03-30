@@ -24,10 +24,10 @@ type TestReceiver struct {
 	Float64       float64   `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
 	String        string    `env:"BIND_TEST_VALUE_STRING" test:"string" flag:"string"`
 	Time          time.Time `env:"BIND_TEST_VALUE_TIME" test:"time" flag:"time"`
-	SliceInt      []int     `test:"slice_int"`    // TODO: env/flag support
-	SliceBool     []bool    `test:"slice_bool"`   // TODO: env/flag support
-	SliceFloat    []float64 `test:"slice_float"`  // TODO: env/flag support
-	SliceString   []string  `test:"slice_string"` // TODO: env/flag support
+	SliceInt      []int     `test:"slice_int"`
+	SliceBool     []bool    `test:"slice_bool"`
+	SliceFloat    []float64 `test:"slice_float"`
+	SliceString   []string  `test:"slice_string"`
 	StrangeCasing string    `test:"strange_casing"`
 }
 
@@ -217,4 +217,15 @@ func TestParse_PointerField_AllocatesNilPointer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, receiver.Data)
 	assert.Equal(t, 23, *receiver.Data)
+}
+
+func TestParseError_SliceElement_Unparseable(t *testing.T) {
+	receiver := struct {
+		Data []int `test:"data"`
+	}{}
+
+	err := parse(&receiver, "test", map[string][]string{"data": {"1", "abc"}})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid syntax")
 }
