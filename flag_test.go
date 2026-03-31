@@ -17,12 +17,16 @@ func TestFlag(t *testing.T) {
 	flag.String("float", "", "string value")
 	flag.String("string", "", "string value")
 	flag.String("time", "", "string value")
+	flag.String("duration", "", "string value")
+	flag.String("ptr_duration", "", "string value")
 
 	flag.Set("int", "23")
 	flag.Set("bool", "true")
 	flag.Set("float", "3.14")
 	flag.Set("string", "abc")
 	flag.Set("time", exampleTime.Format(tagTimeFormat))
+	flag.Set("duration", "1m30s")
+	flag.Set("ptr_duration", "250ms")
 
 	expected := TestReceiver{
 		Int:     23,
@@ -36,10 +40,12 @@ func TestFlag(t *testing.T) {
 		Uint32:  uint32(23),
 		Uint64:  uint64(23),
 		Bool:    true,
-		Float32: float32(3.14),
-		Float64: 3.14,
-		Time:    exampleTime,
-		String:  "abc",
+		Float32:     float32(3.14),
+		Float64:     3.14,
+		Time:        exampleTime,
+		String:      "abc",
+		Duration:    90 * time.Second,
+		PtrDuration: durationPtr(250 * time.Millisecond),
 	}
 
 	var receiver TestReceiver
@@ -172,4 +178,34 @@ func TestFlagError_FieldType(t *testing.T) {
 
 	err := Flag(&receiver)
 	require.ErrorIs(t, err, ErrFieldUnsupportedType)
+}
+
+func TestFlagError_Duration(t *testing.T) {
+	flag.String("duration_error", "", "string value")
+	flag.Set("duration_error", "abc")
+
+	receiver := struct {
+		Data time.Duration `flag:"duration_error"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid duration")
+}
+
+func TestFlagError_PtrDuration(t *testing.T) {
+	flag.String("ptr_duration_error", "", "string value")
+	flag.Set("ptr_duration_error", "abc")
+
+	receiver := struct {
+		Data *time.Duration `flag:"ptr_duration_error"`
+	}{}
+	RegisterFlags(receiver)
+
+	err := Flag(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid duration")
 }

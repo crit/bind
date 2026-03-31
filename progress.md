@@ -87,3 +87,14 @@
 - [x] Add tests for unparseable slice element values in `Env` CSV parsing.
 - [x] Add tests for unparseable slice element values in `Flag` CSV parsing.
 - [x] Ensure errors are clear and consistently include field name + root parse error.
+
+## Epic 12: time.Duration Binding Support
+
+- [x] Add support for binding `time.Duration` fields from `Query`/`Form`/`Header`.
+- [x] Add support for binding `time.Duration` fields from `Env`.
+- [x] Add support for binding `time.Duration` fields from `Flag`.
+- [x] Add support for pointer durations (`*time.Duration`) across all binders.
+- [x] Use `time.ParseDuration` for parsing (e.g. `300ms`, `2s`, `1m30s`).
+- [x] Add tests for valid duration inputs and invalid format errors.
+- [x] Ensure errors include field name and the parse failure context.
+- [x] Update `README.md` supported field types and examples with duration usage.

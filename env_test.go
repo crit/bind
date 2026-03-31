@@ -22,6 +22,12 @@ func TestEnv(t *testing.T) {
 	os.Setenv("BIND_TEST_VALUE_STRING", "abc")
 	defer os.Unsetenv("BIND_TEST_VALUE_STRING")
 
+	os.Setenv("BIND_TEST_VALUE_DURATION", "1m30s")
+	defer os.Unsetenv("BIND_TEST_VALUE_DURATION")
+
+	os.Setenv("BIND_TEST_VALUE_PTR_DURATION", "250ms")
+	defer os.Unsetenv("BIND_TEST_VALUE_PTR_DURATION")
+
 	expected := TestReceiver{
 		Int:     23,
 		Int8:    int8(23),
@@ -34,9 +40,11 @@ func TestEnv(t *testing.T) {
 		Uint32:  uint32(23),
 		Uint64:  uint64(23),
 		Bool:    true,
-		Float32: float32(3.14),
-		Float64: 3.14,
-		String:  "abc",
+		Float32:     float32(3.14),
+		Float64:     3.14,
+		String:      "abc",
+		Duration:    90 * time.Second,
+		PtrDuration: durationPtr(250 * time.Millisecond),
 	}
 
 	var receiver TestReceiver
@@ -210,4 +218,32 @@ func TestEnvError_FieldType(t *testing.T) {
 
 	err := Env(&receiver)
 	require.ErrorIs(t, err, ErrFieldUnsupportedType)
+}
+
+func TestEnvError_Duration(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_DURATION_BAD", "abc")
+	defer os.Unsetenv("BIND_TEST_ENV_DURATION_BAD")
+
+	receiver := struct {
+		Data time.Duration `env:"BIND_TEST_ENV_DURATION_BAD"`
+	}{}
+
+	err := Env(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid duration")
+}
+
+func TestEnvError_PtrDuration(t *testing.T) {
+	os.Setenv("BIND_TEST_ENV_PTR_DURATION_BAD", "abc")
+	defer os.Unsetenv("BIND_TEST_ENV_PTR_DURATION_BAD")
+
+	receiver := struct {
+		Data *time.Duration `env:"BIND_TEST_ENV_PTR_DURATION_BAD"`
+	}{}
+
+	err := Env(&receiver)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid duration")
 }
