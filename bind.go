@@ -46,6 +46,9 @@ var (
 	// cached time type
 	timeType = reflect.TypeOf(time.Time{})
 
+	// cached duration type
+	durationType = reflect.TypeOf(time.Duration(0))
+
 	// configurable global time layout
 	timeLayout = tagTimeFormat
 	timeMux    sync.RWMutex
@@ -339,6 +342,15 @@ func setSliceFromCSV(fieldName string, value reflect.Value, raw string) error {
 }
 
 func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value) error {
+	if structField.Type() == durationType {
+		d, err := time.ParseDuration(val)
+		if err != nil {
+			return err
+		}
+		structField.SetInt(int64(d))
+		return nil
+	}
+
 	switch valueKind {
 	case reflect.Ptr:
 		if structField.IsNil() {

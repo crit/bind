@@ -9,26 +9,28 @@ import (
 )
 
 type TestReceiver struct {
-	Int           int       `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Int8          int8      `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Int16         int16     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Int32         int32     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Int64         int64     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Uint          uint      `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Uint8         uint8     `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Uint16        uint16    `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Uint32        uint32    `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Uint64        uint64    `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
-	Bool          bool      `env:"BIND_TEST_VALUE_BOOL" test:"bool" flag:"bool"`
-	Float32       float32   `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
-	Float64       float64   `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
-	String        string    `env:"BIND_TEST_VALUE_STRING" test:"string" flag:"string"`
-	Time          time.Time `env:"BIND_TEST_VALUE_TIME" test:"time" flag:"time"`
-	SliceInt      []int     `test:"slice_int"`
-	SliceBool     []bool    `test:"slice_bool"`
-	SliceFloat    []float64 `test:"slice_float"`
-	SliceString   []string  `test:"slice_string"`
-	StrangeCasing string    `test:"strange_casing"`
+	Int           int           `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int8          int8          `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int16         int16         `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int32         int32         `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Int64         int64         `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint          uint          `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint8         uint8         `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint16        uint16        `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint32        uint32        `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Uint64        uint64        `env:"BIND_TEST_VALUE_INT" test:"int" flag:"int"`
+	Bool          bool          `env:"BIND_TEST_VALUE_BOOL" test:"bool" flag:"bool"`
+	Float32       float32       `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
+	Float64       float64       `env:"BIND_TEST_VALUE_FLOAT" test:"float" flag:"float"`
+	String        string        `env:"BIND_TEST_VALUE_STRING" test:"string" flag:"string"`
+	Time          time.Time     `env:"BIND_TEST_VALUE_TIME" test:"time" flag:"time"`
+	Duration      time.Duration `env:"BIND_TEST_VALUE_DURATION" test:"duration" flag:"duration"`
+	PtrDuration   *time.Duration `env:"BIND_TEST_VALUE_PTR_DURATION" test:"ptr_duration" flag:"ptr_duration"`
+	SliceInt      []int         `test:"slice_int"`
+	SliceBool     []bool        `test:"slice_bool"`
+	SliceFloat    []float64     `test:"slice_float"`
+	SliceString   []string      `test:"slice_string"`
+	StrangeCasing string        `test:"strange_casing"`
 }
 
 var (
@@ -48,6 +50,8 @@ var (
 		Float64:       3.14,
 		String:        "abc",
 		Time:          time.Date(2022, 11, 10, 0, 0, 0, 0, time.UTC),
+		Duration:      90 * time.Second,
+		PtrDuration:   durationPtr(250 * time.Millisecond),
 		SliceInt:      []int{1, 2, 3},
 		SliceBool:     []bool{true, true, true},
 		SliceFloat:    []float64{1.23, 2.34, 3.45},
@@ -65,9 +69,15 @@ var (
 		"slice_float":    {"1.23", "2.34", "3.45"},
 		"slice_string":   {"a", "b", "c"},
 		"time":           {TestCase.Time.Format(tagTimeFormat)},
+		"duration":       {"1m30s"},
+		"ptr_duration":   {"250ms"},
 		"StrAnGE_CasINg": {"abc"},
 	}
 )
+
+func durationPtr(d time.Duration) *time.Duration {
+	return &d
+}
 
 func TestParse(t *testing.T) {
 	var receiver TestReceiver
@@ -228,4 +238,26 @@ func TestParseError_SliceElement_Unparseable(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "Data is an")
 	assert.ErrorContains(t, err, "invalid syntax")
+}
+
+func TestParseError_Duration(t *testing.T) {
+	receiver := struct {
+		Data time.Duration `test:"data"`
+	}{}
+
+	err := parse(&receiver, "test", map[string][]string{"data": {"abc"}})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid duration")
+}
+
+func TestParseError_PtrDuration(t *testing.T) {
+	receiver := struct {
+		Data *time.Duration `test:"data"`
+	}{}
+
+	err := parse(&receiver, "test", map[string][]string{"data": {"abc"}})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Data is an")
+	assert.ErrorContains(t, err, "invalid duration")
 }

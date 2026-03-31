@@ -107,7 +107,8 @@ Scalar types:
 - `float32`, `float64`
 - `string`
 - `time.Time`
-- pointers to supported scalar types
+- `time.Duration` (parsed with `time.ParseDuration`, e.g. `300ms`, `2s`, `1m30s`)
+- pointers to supported scalar types (including `*time.Duration`)
 
 Collection support:
 - `Query`/`Form`/`Header`: supports slices (`[]T`) of supported scalar element types.
@@ -140,6 +141,8 @@ type Config struct {
 ```
 
 If parsing fails, bind returns `ErrFieldTimeFormat`.
+
+Duration values use Go duration strings and are parsed with `time.ParseDuration`.
 
 ## Receiver behavior
 
@@ -176,3 +179,5 @@ Example result (Apple M1):
   - Ensure value matches `YYYY-MM-DD` (`2006-01-02`).
 - **"flag not registered with bind.RegisterFlags"**
   - Call `RegisterFlags(...)`/`RegisterFlagsWithSet(...)` before `Flag(...)`.
+- **"invalid duration"**
+  - Ensure duration values use Go syntax like `300ms`, `2s`, `1m30s`.
