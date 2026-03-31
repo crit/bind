@@ -1,4 +1,4 @@
-module github.com/crit/bind
+module github.com/crit/bind/v2
 
 go 1.19
 

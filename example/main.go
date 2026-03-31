@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/crit/bind"
+	"github.com/crit/bind/v2"
 )
 
 type Config struct {

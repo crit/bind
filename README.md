@@ -12,7 +12,7 @@ Lightweight struct binding for Go.
 ## Install
 
 ```bash
-go get github.com/crit/bind
+go get github.com/crit/bind/v2
 ```
 
 ## Quick start
@@ -24,7 +24,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/crit/bind"
+	"github.com/crit/bind/v2"
 )
 
 type Input struct {
